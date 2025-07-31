@@ -1,0 +1,222 @@
+/*
+ * Copyright (c) 2017 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /dts-v1/;
+ #include <nordic/nrf52832_qfaa.dtsi>
+ 
+ / {
+	 model = "phyphox-keyfob";
+	 compatible = "phyphox,phyphox-keyfob";
+	 aliases {
+		i2c = &i2c0;
+		spi= &spi1;
+		spi2= &spi2;
+		hdc = &hdc_node;
+	 };
+ 
+	 chosen {
+		 zephyr,console = &uart0;
+		 zephyr,shell-uart = &uart0;
+		 zephyr,uart-mcumgr = &uart0;
+		 zephyr,bt-mon-uart = &uart0;
+		 zephyr,bt-c2h-uart = &uart0;
+		 zephyr,sram = &sram0;
+		 zephyr,flash = &flash0;
+		 zephyr,code-partition = &slot0_partition;
+	 };
+ 
+	 leds {
+		 compatible = "gpio-leds";		 
+	 };
+	buttons {
+		compatible = "gpio-keys";
+		button0: button_0 { // 
+			gpios = <&gpio0 11 (GPIO_ACTIVE_HIGH)>;
+			label = "lsm data ready";
+		};
+		button1: button_1 { // gpio31 P0.27
+			gpios = <&gpio0 17 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "bmp data ready";
+		};
+	};
+ };
+
+ &pinctrl {
+    i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 19)>, <NRF_PSEL(TWIM_SCL, 0, 20)>;
+			bias-disable;
+		};
+		
+	};
+    i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 19)>, <NRF_PSEL(TWIM_SCL, 0, 20)>;
+			low-power-enable;
+		};
+		
+	};
+	spi_master_default: spi_master_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 14)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 13)>,
+					<NRF_PSEL(SPIM_MISO, 0, 12)>;
+		};
+	};
+	spi_master_sleep: spi_master_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 14)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 13)>,
+					<NRF_PSEL(SPIM_MISO, 0, 12)>;
+			low-power-enable;
+		};
+	};
+	spi_flash_default: spi_flash_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+					<NRF_PSEL(SPIM_MISO, 0, 10)>;
+		};
+	};
+	spi_flash_sleep: spi_flash_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+					<NRF_PSEL(SPIM_MISO, 0, 10)>;
+			low-power-enable;
+		};
+	};		
+};
+
+ i2c_0: &i2c0 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    //sda-pin = < 26 >;
+    //scl-pin = < 6 >;
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+    label = "i2c";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	hdc_node: hdc1080@40 {
+		compatible =  "ti,hdc","ti,hdc1080";
+		reg = <0x40>;
+		label = "hdc1080";
+	};
+};
+
+my_spi_master: &spi1 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	pinctrl-0 = <&spi_master_default>;
+	pinctrl-1 = <&spi_master_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio0 15 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+	
+	lsm6dsr: lsm6dsr@0 {
+		status = "okay";
+		compatible = "vnd,spi-device";
+		reg = <0>;
+		spi-max-frequency = < 8000000 >;
+	};
+	
+};
+
+flash_spi_master: &spi2 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	pinctrl-0 = <&spi_flash_default>;
+	pinctrl-1 = <&spi_flash_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio0 6 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+	
+	mx25r6435f: mx25r6435f@0 {
+		status = "okay";
+        compatible = "jedec,spi-nor";
+        reg = <0>;
+        spi-max-frequency = <8000000>;
+        label = "MX25R6435F";
+        jedec-id = [c2 28 15];
+        size = <16777216>;
+		
+		has-dpd;
+		t-enter-dpd = <10000>;
+		t-exit-dpd = <35000>;
+		
+		sfdp-bfp = [
+
+		e5 20 f1 ff ff ff ff 00 44 eb 08 6b 08 3b 04 bb
+
+		ee ff ff ff ff ff 00 ff ff ff 00 ff 0c 20 0f 52
+
+		10 d8 00 ff 23 72 f5 00 82 ed 04 c3 44 83 48 44
+
+		30 b0 30 b0 f7 c4 d5 5c 00 be 29 ff f0 d0 ff ff
+
+		];
+		
+    };
+	
+	
+};
+ 
+ &adc {
+	 status = "disabled";
+ };
+ 
+ 
+ &gpiote {
+	 status = "okay";
+ };
+ 
+ &gpio0 {
+	 status = "okay";
+	 sense-edge-mask = < 0xffffffff >;
+ };
+ 
+ /*
+ &gpio1 {
+	 status = "okay";
+ };
+ */
+ 
+ &uart0 {
+	 compatible = "nordic,nrf-uarte";
+	 status = "disabled";
+	 //current-speed = <115200>;
+	 //tx-pin = <17>;
+	 //rx-pin = <8>;
+	 //rts-pin = <5>;
+	 //cts-pin = <7>;
+ };
+ 
+ &flash0 {
+ 
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0xC000>;
+		};
+		slot0_partition: partition@c000 {
+			label = "image-0";
+			reg = <0x0000C000 0x37000>;
+		};
+		slot1_partition: partition@43000  {
+			label = "image-1";
+			reg = <0x00043000 0x37000>;
+		};
+		storage_partition: partition@7a000 {
+			label = "storage";
+			reg = <0x0007A000 0x00006000>;
+		};
+	};
+ };
+  

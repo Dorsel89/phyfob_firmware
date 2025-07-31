@@ -1,0 +1,24 @@
+{
+    "nrf-connect.topdir": "${nrf-connect.sdk:2.6.1}",
+    "nrf-connect.toolchain.path": "${nrf-connect.toolchain:2.6.1}",
+    "files.associations": {
+        "types.h": "c",
+        "poweroff.h": "c",
+        "streambuf": "c",
+        "*.tcc": "c",
+        "exception": "c",
+        "memory_resource": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "ostream": "c",
+        "spi.h": "c",
+        "typeinfo": "c",
+        "bas.h": "c",
+        "sensirion_common.h": "c",
+        "sensor.h": "c",
+        "math.h": "c"
+    },
+    "nrf-connect.applications": [
+        "${workspaceFolder}"
+    ]
+}

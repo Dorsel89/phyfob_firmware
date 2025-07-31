@@ -1,0 +1,189 @@
+/*
+ * Copyright (c) 2017 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ /dts-v1/;
+ #include <nordic/nrf52833_qiaa.dtsi>
+ 
+ / {
+	 model = "phyphox-newton";
+	 compatible = "phyphox,newton-n1";
+	 aliases {
+		i2c = &i2c0;
+		spi= &spi1;
+		led-blue = &led0;
+		led-red = &led1;
+		led-green = &led2;
+		shtc-3 = &shtc3_node;
+	 };
+ 
+	 chosen {
+		 zephyr,console = &uart0;
+		 zephyr,shell-uart = &uart0;
+		 zephyr,uart-mcumgr = &uart0;
+		 zephyr,bt-mon-uart = &uart0;
+		 zephyr,bt-c2h-uart = &uart0;
+		 zephyr,sram = &sram0;
+		 zephyr,flash = &flash0;
+		 zephyr,code-partition = &slot0_partition;
+	 };
+ 
+	 leds {
+		 compatible = "gpio-leds";
+		 led0: led_0 {
+			 gpios = <&gpio0 28 GPIO_ACTIVE_LOW>;
+			 label = "Blue LED";
+		 };
+		 led1: led_1 {
+			 gpios = <&gpio0 29 GPIO_ACTIVE_LOW>;
+			 label = "Red LED";
+		 };
+		 led2: led_2 {
+			gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
+			label = "Green LED";
+		};		 
+	 };
+	buttons {
+		compatible = "gpio-keys";
+		button0: button_0 { // INT1 P0.12 Gpio 15 ; INT2 P0.11 GPIO14
+			gpios = <&gpio0 12 (GPIO_ACTIVE_LOW)>;
+			label = "bmi data ready";
+		};
+		button1: button_1 { // gpio31 P0.27
+			gpios = <&gpio0 27 (GPIO_ACTIVE_LOW)>;
+			label = "bmp data ready";
+		};
+		button2: button_2 { // gpio40 P0.15
+			gpios = <&gpio0 15 (GPIO_ACTIVE_LOW)>;
+			label = "veml6030 data ready";
+		};
+		button3: button_3 { // gpio39 P0.23
+			gpios = <&gpio0 23 (GPIO_ACTIVE_HIGH)>;
+			label = "mlx XShut";
+		};
+		button4: button_4 { // gpio19 P0.03
+			gpios = <&gpio0 3 (GPIO_ACTIVE_LOW)>;
+			label = "vl53 data ready";
+		};
+	};
+ };
+
+ &pinctrl {
+    i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 26)>, <NRF_PSEL(TWIM_SCL, 0, 6)>;
+		};
+	};
+    i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 26)>, <NRF_PSEL(TWIM_SCL, 0, 6)>;
+		};
+	};
+	spi_master_default: spi_master_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 22)>,
+					<NRF_PSEL(SPIM_MISO, 0, 5)>;
+		};
+	};
+	spi_master_sleep: spi_master_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 22)>,
+					<NRF_PSEL(SPIM_MISO, 0, 5)>;
+			low-power-enable;
+		};
+	};	
+};
+
+ i2c_0: &i2c0 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    //sda-pin = < 26 >;
+    //scl-pin = < 6 >;
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+    label = "i2c";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	shtc3_node: shtcx@70 {
+		compatible = "sensirion,shtcx";
+		chip = "shtc3";
+		measure-mode = "low-power";
+		reg = <0x70>;
+		label = "SHTC3";
+	};
+};
+
+my_spi_master: &spi1 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	pinctrl-0 = <&spi_master_default>;
+	pinctrl-1 = <&spi_master_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
+	reg_my_spi_master: spi-dev-a@0 {
+		reg = <0>;
+	};
+};
+ 
+ &adc {
+	 status = "okay";
+ };
+ 
+ &gpiote {
+	 status = "okay";
+ };
+ 
+ &gpio0 {
+	 status = "okay";
+ };
+ 
+ &gpio1 {
+	 status = "okay";
+ };
+ 
+ &uart0 {
+	 compatible = "nordic,nrf-uarte";
+	 status = "disabled";
+	 //current-speed = <115200>;
+	 //tx-pin = <17>;
+	 //rx-pin = <8>;
+	 //rts-pin = <5>;
+	 //cts-pin = <7>;
+ };
+ 
+ &flash0 {
+ 
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0xC000>;
+		};
+		slot0_partition: partition@c000 {
+			label = "image-0";
+			reg = <0x0000C000 0x37000>;
+		};
+		slot1_partition: partition@43000 {
+			label = "image-1";
+			reg = <0x00043000 0x37000>;
+		};
+		storage_partition: partition@7a000 {
+			label = "storage";
+			reg = <0x0007A000 0x00006000>;
+		};
+	};
+ };
+ 
+ &usbd {
+	 compatible = "nordic,nrf-usbd";
+	 status = "okay";
+ };
+ 

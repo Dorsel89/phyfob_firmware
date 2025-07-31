@@ -1,0 +1,7 @@
+# Copyright (c) 2021 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_PHYPHOX_KEYFOB
+	bool "phyphox-keyfob"
+
+	depends on SOC_NRF52832_QFAA
