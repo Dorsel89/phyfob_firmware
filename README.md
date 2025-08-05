@@ -1,13 +1,13 @@
 # phyfob
  
 ## Sensors
-- [BMP580](https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp581-ds004.pdf)
-- LSM6DSR
-- HDC1080
-- STCC4
+- [BMP580](#bmp581) (Pressure, Temperature) [[Datasheet](https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp581-ds004.pdf)]
+- [LSM6DSR](#lsm6dsr) (Acceleration, Rotation) [[Datasheet](https://www.st.com/resource/en/datasheet/lsm6dsr.pdf)]
+- [HDC1080](#hdc1080) (Temperature, Humidity) [[Datasheet](https://www.ti.com/lit/gpn/hdc1080)]
+- [STCC4](#stcc4) (CO₂) [[Datasheet](https://sensirion.com/resource/datasheet/STCC4)]
 
 ### BMP581
-data characteristic | |    
+sensor data | |    
 -------------------|-----
 uuid          | cddf1013-30f7-4671-8b43-5e40ba53514a
 byte 0-3          | pressure (float32LittleEndian) 
@@ -44,3 +44,36 @@ coefficient 15 | 0x04
 coefficient 31 | 0x05
 coefficient 63 | 0x06
 coefficient 127 | 0x07
+
+
+### LSM6DSR
+
+rotation rate data | (for float configuration) |    
+-------------------|-----
+uuid          | cddf1000-30f7-4671-8b43-5e40ba53514a
+byte 0-3          | x (float32LittleEndian) 
+byte 4-7          | y (float32LittleEndian)
+byte 8-11         | z (float32LittleEndian)
+byte 12-15         | timestamp (float32LittleEndian)
+
+Data is repeating every 12 byte.
+
+acceleration data | (for float configuration) |    
+-------------------|-----
+uuid          | cddf1001-30f7-4671-8b43-5e40ba53514a
+byte 0-3          | x (float32LittleEndian) 
+byte 4-7          | y (float32LittleEndian)
+byte 8-11         | z (float32LittleEndian)
+byte 12-15         | timestamp (float32LittleEndian)
+
+Data is repeating every 12 byte.
+
+
+configuration | |    
+-------------------|-----
+uuid        | cddf1002-30f7-4671-8b43-5e40ba53514a
+byte 0          | enable (bool)
+
+### HDC1080
+### STCC4
+
