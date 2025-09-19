@@ -6,6 +6,7 @@ LSM lsm_data;
 STCC4 stcc4_data;
 LOGGING logging;
 PHYPHOX_EVENT event_data;
+HDC hdc_data;
 //uint8_t OPERATING_MODE = MODE_BTHOME;
 uint8_t OPERATING_MODE = MODE_PHYPHOX;
 
@@ -234,6 +235,7 @@ static void bt_ready(void)
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
+	en_logging(false);
 	OPERATING_MODE = MODE_PHYPHOX;
 	basic_advertising();
 	printk("Device with index %i trying to connect...\n\r",bt_conn_index(conn));
@@ -254,25 +256,25 @@ void enter_logging(){
 	stcc4_logging(true);
 
 }
+void en_logging(bool b){
+	logging.enable = b;
+	hdc_logging(b);
+	stcc4_logging(b);
+}
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printk("Disconnected (reason 0x%02x)\n\r", reason);
-	if(bmp_data.logging==false){
-		bmp_data.live = false;
-		sleep_bmp(true);
-	}else{
-		bmp_data.live = false;
-		bmp_loggingmode();
-	}
-	BLE_PARAMETER_UPDATED = false;
-	sleep_hdc(true);
-	enable_lsm(false);
-	sleep_stcc4(true);
 
+	en_logging(true);
+	BLE_PARAMETER_UPDATED = false;
+		
+	enable_lsm(false);
+	sleep_bmp(true);
+	
 	//OPERATING_MODE = MODE_BTHOME;
 	OPERATING_MODE = MODE_PHYPHOX;
-	bthome_mode();
+	//bthome_mode();
 }
 static void le_param_updated(struct bt_conn *conn, uint16_t interval,
 			     uint16_t latency, uint16_t timeout){

@@ -32,6 +32,8 @@ void send_data(uint8_t ID, float* DATA,uint8_t LEN);
 void update_advertising(uint8_t t_low, uint8_t t_high, uint8_t h_low, uint8_t h_high);
 void basic_advertising();
 
+void en_logging(bool b);
+
 extern void set_coincell_level(uint8_t val);
 
 static bool BLE_PARAMETER_UPDATED;

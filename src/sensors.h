@@ -74,18 +74,27 @@ typedef struct {
 
 typedef struct {
 	bool enable;
-	uint16_t interval_ms;
+	uint16_t interval_s;
 }LOGGING;
 
 typedef struct {
 	uint8_t config[20];
 }PHYPHOX_EVENT;
 
+typedef struct {
+	float humidity;
+	float temperature;
+	float timestamp;
+	float array[3];
+	uint16_t timer_interval;
+	uint8_t config[20];
+}HDC;
+
+extern HDC hdc_data;
 extern BMP bmp_data;
 extern LSM lsm_data;
 extern LOGGING logging;
 extern STCC4 stcc4_data;
-//extern SHTC shtc_data;
 
 extern PHYPHOX_EVENT event_data;
 extern float global_timestamp;
@@ -102,6 +111,8 @@ typedef struct {
 	uint16_t average_n;
 	float last_save;
 }DATALOGGING;
+
+
 
 extern DATALOGGING LOG;
 #endif // SENSORS_H

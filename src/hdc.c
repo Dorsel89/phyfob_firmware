@@ -1,9 +1,9 @@
 #include "hdc.h"
-HDC hdc_data;
+//HDC hdc_data;
 
 void bthome_mode(){
     hdc_data.timer_interval = 200;
-    k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval*10), K_MSEC(hdc_data.timer_interval*10));
+    k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval), K_MSEC(hdc_data.timer_interval));
 }
 extern bool init_hdc() 
 {   
@@ -11,13 +11,13 @@ extern bool init_hdc()
         printk("Device not ready or not found");
         return false;
     }
-    hdc_data.timer_interval = 3;
+    hdc_data.timer_interval = logging.interval_s*1000;
     k_work_init(&work_hdc, send_data_hdc);
 	k_work_init(&config_work_hdc, set_config_hdc);
     k_timer_init(&timer_hdc, hdc_data_ready, NULL);
     //OPERATING_MODE = MODE_BTHOME;
     //bthome_mode();
-    sleep_hdc(true);
+    sleep_hdc(!logging.enable);
     return true;
 }
 
@@ -27,13 +27,13 @@ extern void sleep_hdc(bool sleep)
         k_timer_stop(&timer_hdc);
     }
     else{
-        k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval*10), K_MSEC(hdc_data.timer_interval*10));
+        k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval), K_MSEC(hdc_data.timer_interval));
     }
 }
 
 extern void hdc_logging(bool l){
     if(l){
-        k_timer_start(&timer_hdc, K_MSEC(logging.interval_ms), K_MSEC(logging.interval_ms));
+        k_timer_start(&timer_hdc, K_MSEC(logging.interval_s*1000), K_MSEC(logging.interval_s*1000));
     }else{
         k_timer_stop(&timer_hdc);
     }
@@ -76,13 +76,12 @@ void send_data_hdc()
 
 void set_config_hdc() 
 {
-    hdc_logging(false);
     sleep_hdc(true);
-    hdc_data.timer_interval = hdc_data.config[1];
+    hdc_data.timer_interval = hdc_data.config[1]*100;
     printk("hdc config received \n");
     printk("hdc interval: %i\n",hdc_data.timer_interval);
     //Ensure minimum of 30ms
-    if (hdc_data.timer_interval < 3) {hdc_data.timer_interval = 3;}
+    if (hdc_data.timer_interval < 300) {hdc_data.timer_interval = 300;}
     sleep_hdc(!hdc_data.config[0]);
 }
 

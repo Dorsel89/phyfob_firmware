@@ -45,25 +45,17 @@ int main(void)
 {
         printk("HELLOWORLD\r\n");
         
-        
+        //init logging
+        logging.enable = true;
+        logging.interval_s = 10;
 
-        //i2c_configure(device_get_binding("i2c"),I2C_SPEED_SET(I2C_SPEED_FAST));
-        //init_ble();
+        init_ble();
         init_hdc();
         init_bmp();
         init_lsm();
         init_stcc4();
         //init_BAS();
-
-        //init logging
-        logging.enable = false;
-        logging.interval_ms = 30*1000;
-        uint8_t test = stcc4_enter_sleep_mode();
-        printk("stcc4 sleeping: %i \r\n",test);
-
-        //enter_logging(true);
-        //pm_state_force(0u, &(struct pm_state_info){PM_STATE_SOFT_OFF, 0, 0});
-        
+       
         
         const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r6435f));
         if (!device_is_ready(flash_dev)) {

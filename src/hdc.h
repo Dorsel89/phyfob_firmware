@@ -15,16 +15,7 @@ const static struct device *hdc_dev = DEVICE_DT_GET(HDC_NODE);
 #error "Node is disabled"
 #endif
 
-typedef struct {
-	float humidity;
-	float temperature;
-	float timestamp;
-	float array[3];
-	uint16_t timer_interval;
-	uint8_t config[20];
-}HDC;
 
-extern HDC hdc_data;
 static struct sensor_value hdc_temp, hdc_humid;
 
 static struct k_timer timer_hdc;
