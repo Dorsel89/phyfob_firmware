@@ -179,18 +179,17 @@ int16_t stcc4_set_rht_compensation(uint16_t raw_temperature,
     int16_t local_error = NO_ERROR;
     uint8_t* buffer_ptr = communication_buffer;
     uint16_t local_offset = 0;
-    local_offset =
-        sensirion_i2c_add_command16_to_buffer(buffer_ptr, local_offset, 0xe000);
-    local_offset = sensirion_i2c_add_uint16_t_to_buffer(
-        buffer_ptr, local_offset, raw_temperature);
-    local_offset = sensirion_i2c_add_uint16_t_to_buffer(
-        buffer_ptr, local_offset, raw_humidity);
-    local_error =
-        sensirion_i2c_write_data(_i2c_address, buffer_ptr, local_offset);
+    local_offset = sensirion_i2c_add_command16_to_buffer(buffer_ptr, local_offset, 0xe000);
+    local_offset = sensirion_i2c_add_uint16_t_to_buffer(buffer_ptr, local_offset, raw_temperature);
+    local_offset = sensirion_i2c_add_uint16_t_to_buffer(buffer_ptr, local_offset, raw_humidity);
+    /*
+    local_error = sensirion_i2c_write_data(_i2c_address, buffer_ptr, local_offset);
     if (local_error != NO_ERROR) {
         return local_error;
     }
     sensirion_i2c_hal_sleep_usec(1 * 1000);
+    */
+    local_error = i2c_burst_write(stcc4_dev,STCC4_I2C_ADDR_64,0x00,communication_buffer,local_error);
     return local_error;
 }
 

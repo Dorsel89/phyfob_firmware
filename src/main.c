@@ -47,8 +47,8 @@ int main(void)
         
         //init logging
         logging.enable = true;
-        logging.interval_s = 10;
-
+        logging.interval_s = 60;
+        
         init_ble();
         init_hdc();
         init_bmp();
@@ -64,7 +64,7 @@ int main(void)
         }
 
         
-        uint8_t dpd_cmd = 0xB9;
+        uint8_t dpd_cmd = 0x79;//0xB9;
         int ret = spi_write(flash_dev, &spi_cfg, &(struct spi_buf_set){
                 .buffers = &(struct spi_buf){
                 .buf = &dpd_cmd,

@@ -139,8 +139,8 @@ flash_spi_master: &spi2 {
         compatible = "jedec,spi-nor";
         reg = <0>;
         spi-max-frequency = <8000000>;
-        label = "MX25R6435F";
-        jedec-id = [c2 28 15];
+        label = "AT25FF161A";
+        jedec-id = [1f 46 08];
         size = <16777216>;
 		
 		has-dpd;

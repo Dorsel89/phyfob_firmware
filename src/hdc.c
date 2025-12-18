@@ -2,7 +2,7 @@
 //HDC hdc_data;
 
 void bthome_mode(){
-    hdc_data.timer_interval = 200;
+    hdc_data.timer_interval = logging.interval_s*1000;
     k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval), K_MSEC(hdc_data.timer_interval));
 }
 extern bool init_hdc() 
@@ -18,6 +18,7 @@ extern bool init_hdc()
     //OPERATING_MODE = MODE_BTHOME;
     //bthome_mode();
     sleep_hdc(!logging.enable);
+
     return true;
 }
 
@@ -63,14 +64,18 @@ void send_data_hdc()
         return;
     }
 
+    if(logging.enable){
+        stcc4_compensate(hdc_data.temperature,hdc_data.humidity);
+        return;
+    }
+
     float timestamp = k_uptime_get() /1000.0;
     hdc_data.timestamp = timestamp;
     hdc_data.array[0] = hdc_data.temperature;
     hdc_data.array[1] = hdc_data.humidity;
     hdc_data.array[2] = hdc_data.timestamp-global_timestamp;
 
-    //printk("%f || %f \n", hdc_data.temperature, hdc_data.humidity);
-    stcc4_compensate(hdc_data.temperature,hdc_data.humidity);
+    
     send_data(SENSOR_HDC_ID, &hdc_data.array, 4*3);
 }
 

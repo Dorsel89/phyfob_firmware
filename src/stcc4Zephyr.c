@@ -46,6 +46,7 @@ extern int8_t init_stcc4(){
 	k_work_init(&config_work_stcc4, set_config_stcc4);
     k_timer_init(&timer_stcc4, stcc4_data_ready, NULL);
     sleep_stcc4(!logging.enable);
+    //sleep_stcc4(true);
     return true;
 
 }
@@ -57,7 +58,11 @@ extern uint8_t sleep_stcc4(bool SLEEP){
         stcc4_enter_sleep_mode();
     }else{
         stcc4_exit_sleep_mode();
-        stcc4_start_continuous_measurement();
+        if(logging.enable){
+            stcc4_enter_sleep_mode();
+        }else{
+            stcc4_start_continuous_measurement();
+        }
         k_timer_start(&timer_stcc4, K_MSEC(stcc4_data.timer_interval), K_MSEC(stcc4_data.timer_interval));
     }    
 }
@@ -66,7 +71,13 @@ extern uint8_t stcc4_compensate(float t, float rh){
     uint16_t t_u16 = (t+45)*(pow(2,16)-1)/175;
     uint16_t rh_u16 = (rh+6)*(pow(2,16)-1)/125;
     printk("compensation with: t: %i rh: %i \r\n",t_u16,rh_u16);
-    return stcc4_set_rht_compensation(t_u16,rh_u16);
+    if(logging.enable){
+        stcc4_exit_sleep_mode();
+        stcc4_set_rht_compensation(t_u16,rh_u16);
+        stcc4_enter_sleep_mode();
+    }
+    
+    return;
 }
 
 extern void stcc4_logging(bool l){
@@ -95,6 +106,7 @@ void send_data_stcc4()
             &co2_concentration_raw, &temperature_raw, &relative_humidity_raw,
             &sensor_status_raw);
         stcc4_enter_sleep_mode();
+        return;
 
     }else{
         //phyphox live mode

@@ -1967,7 +1967,7 @@ int8_t bmi3_set_regs(uint8_t reg_addr, const uint8_t *data, uint16_t len, struct
 
     /* Null-pointer check */
     rslt = null_ptr_check(dev);
-    printf("test3\e\n");
+
     if ((rslt == BMI3_OK) && (data != NULL))
     {
         /* Configuring reg_addr for SPI Interface */
