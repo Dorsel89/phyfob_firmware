@@ -4,4 +4,4 @@
 config BOARD_PHYPHOX_KEYFOB
 	bool "phyphox-keyfob"
 
-	depends on SOC_NRF52832_QFAA
+	depends on SOC_NRF52832_QFAB
