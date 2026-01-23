@@ -4,6 +4,6 @@
 #include <zephyr/kernel.h>
 #include "sensors.h"
 extern void phyphox_event_received();
-
+extern bool CLEARED;
 
 #endif

@@ -10,11 +10,12 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 #add_subdirectory(drivers)
 
 project(phyfob)
+target_sources(app PRIVATE src/event.c)
 target_sources(app PRIVATE src/ble.c)
 target_sources(app PRIVATE src/hdc.c)
 target_sources(app PRIVATE src/bmp5.c)
 target_sources(app PRIVATE src/bmpZephyr.c)
-target_sources(app PRIVATE src/event.c)
+
 target_sources(app PRIVATE src/lsm6dsr.c)
 target_sources(app PRIVATE src/lsm6dsr_reg.c)
 

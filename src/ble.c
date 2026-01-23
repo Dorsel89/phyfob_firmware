@@ -23,6 +23,45 @@ static const struct bt_le_adv_param adv_param_normal = {
 	.interval_max = 3360,
 };
 
+static const struct bt_le_adv_param adv_param_fast = {
+	.options = BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_USE_NAME | BT_LE_ADV_OPT_FORCE_NAME_IN_AD,
+	.interval_min = 80,
+	.interval_max = 100,
+};
+
+static const struct bt_data ad[] = {
+	/*
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
+		BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)), //battery service
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, 
+		BT_UUID_128_ENCODE(0xcddf1001, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a))
+	*/
+	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
+	BT_DATA_BYTES(BT_DATA_UUID16_ALL,BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+};
+
+// SCAN RESPONSE DATA
+static const struct bt_data sd[] = {
+BT_DATA_BYTES(BT_DATA_UUID128_ALL,
+		      0x84, 0xaa, 0x60, 0x74, 0x52, 0x8a, 0x8b, 0x86,
+		      0xd3, 0x4c, 0xb7, 0x1d, 0x1d, 0xdc, 0x53, 0x8d),
+//BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, sizeof(DEVICE_NAME) - 1),
+};
+
+static void timer_handler(struct k_timer *timer) {
+	
+    k_work_submit(&stop_adv);
+	return;
+}
+
+void restart_ee_advertising(){
+bt_le_adv_stop();
+bt_le_adv_start(&adv_param_normal, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+}
+
+K_TIMER_DEFINE(adv_timer, timer_handler, NULL);
+
 static const struct bt_le_conn_param conn_paramter = {
 	.interval_min = 12,
 	.interval_max = 15,
@@ -172,25 +211,7 @@ static const struct bt_data ad_bthome[] = {
 	BT_DATA(BT_DATA_SVC_DATA16, service_data, ARRAY_SIZE(service_data))
 };
 
-static const struct bt_data ad[] = {
-	/*
-	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-		BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)), //battery service
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL, 
-		BT_UUID_128_ENCODE(0xcddf1001, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a))
-	*/
-	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
-	BT_DATA_BYTES(BT_DATA_UUID16_ALL,BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
-};
 
-// SCAN RESPONSE DATA
-static const struct bt_data sd[] = {
-BT_DATA_BYTES(BT_DATA_UUID128_ALL,
-		      0x84, 0xaa, 0x60, 0x74, 0x52, 0x8a, 0x8b, 0x86,
-		      0xd3, 0x4c, 0xb7, 0x1d, 0x1d, 0xdc, 0x53, 0x8d),
-//BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, sizeof(DEVICE_NAME) - 1),
-};
 extern void update_advertising(uint8_t t_low, uint8_t t_high, uint8_t h_low, uint8_t h_high){
 	service_data[4] = t_low;
 	service_data[5] = t_high;
@@ -235,9 +256,12 @@ static void bt_ready(void)
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
+	
+	CLEARED = true;
 	en_logging(false);
 	OPERATING_MODE = MODE_PHYPHOX;
-	basic_advertising();
+	//basic_advertising();
+	bt_le_adv_stop();
 	printk("Device with index %i trying to connect...\n\r",bt_conn_index(conn));
 	
 	bt_conn_le_param_update(conn,&conn_paramter);
@@ -264,6 +288,8 @@ void en_logging(bool b){
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	bt_le_adv_start(&adv_param_fast, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	k_timer_start(&adv_timer, K_SECONDS(10), K_NO_WAIT); //change back to energy efficient advertising after 1min
 	printk("Disconnected (reason 0x%02x)\n\r", reason);
 
 	en_logging(true);
@@ -318,6 +344,7 @@ static struct bt_conn_cb conn_callbacks = {
 };
 
 void init_ble(){
+	k_work_init(&stop_adv, restart_ee_advertising);
 	bt_enable(NULL);
 	bt_ready();
 	bt_conn_cb_register(&conn_callbacks);

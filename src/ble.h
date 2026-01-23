@@ -36,6 +36,9 @@ void en_logging(bool b);
 
 extern void set_coincell_level(uint8_t val);
 
+static struct k_work stop_adv;
+void restart_ee_advertising();
+
 static bool BLE_PARAMETER_UPDATED;
 
 static bool notify_enabled;

@@ -58,13 +58,17 @@ int main(void)
        
         
         const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r6435f));
+       
         if (!device_is_ready(flash_dev)) {
                 printk("SPI NOR Device nicht bereit\n");
                 return;
         }
 
-        
-        uint8_t dpd_cmd = 0x79;//0xB9;
+        /*
+        0xB9 for mx25r6435f
+        0x79 for AT25FF161A
+        */
+        uint8_t dpd_cmd = 0x79;
         int ret = spi_write(flash_dev, &spi_cfg, &(struct spi_buf_set){
                 .buffers = &(struct spi_buf){
                 .buf = &dpd_cmd,
