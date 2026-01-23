@@ -111,3 +111,21 @@ configuration | |
 uuid        | cddf100c-30f7-4671-8b43-5e40ba53514a
 byte 0          | enable (bool)
 byte 1          | measurement interval in multiple of 1s (minimum 1s)<br/> e.g. 0x04 = 4s
+
+## Current consumption
+sensor | datasheet |    
+-------------------|-----
+BMP581        | 0.55µA
+STCC4        | 1µA
+HDC1080        | 0.1µA
+LSM6DSR        | 3µA
+nrf52832        | 2µA (idle) / 8.5µA (2s advertising interval)
+*total*        | 6.65µA / 13.15µA
+
+ || measured |     
+-------------------|-----
+power down        | 5.5µA
+idle        | 7.8µA
+average (2s advertising interval)        | 12.7µA
+
+
