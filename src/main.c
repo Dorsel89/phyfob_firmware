@@ -84,7 +84,5 @@ int main(void)
         
         
         pm_device_action_run(flash_dev,PM_DEVICE_ACTION_SUSPEND);
-
-
         return 0;
 }

@@ -53,14 +53,13 @@ typedef struct {
 
 typedef struct {
 	int event_size;
-	int event_number;
+	volatile int event_number;
 	int nOutputs;
 	int16_t acc_array[3*40+2];//x,y,z,t
 	float acc_time[40];
 	int16_t gyr_array[3*40+2];//x,y,z,t
 	float gyr_time[40];
 	uint8_t config[20];
-	uint32_t package_number;
 }LSM;
 
 typedef struct {
@@ -79,6 +78,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t config[20];
+	bool RUNNING;
 }PHYPHOX_EVENT;
 
 typedef struct {
@@ -97,7 +97,7 @@ extern LOGGING logging;
 extern STCC4 stcc4_data;
 
 extern PHYPHOX_EVENT event_data;
-extern float global_timestamp;
+extern volatile float global_timestamp;
 
 
 typedef struct {

@@ -38,6 +38,8 @@ extern void adjust_lsm_configuration(void){
     if(DEBUG){printk("3 range gyr: %i\n\r",*lsm_range_gyr);};
     if(DEBUG){printk("4 format: %i\n\r",*lsm_format);};
     if(DEBUG){printk("5 event size: %i\n\r",*lsm_event_size);};
+    
+    lsm_data.event_number = 0;
     k_sleep(K_MSEC(100));
 
     //set ranges
@@ -46,14 +48,11 @@ extern void adjust_lsm_configuration(void){
     
     //set eventsize
     lsm_data.event_size = *lsm_event_size;
-    //set average
-
+    
     //enable and rates
     enable_lsm(*lsm_en);
+    
 }
-
-float last_val=0;
-uint16_t cnt = 0;
 
 float get_gyr_si(int16_t lsb){
     if(*lsm_range_gyr == LSM6DSR_125dps){
@@ -270,8 +269,8 @@ uint8_t enable_lsm(uint8_t en){
     if(en == 0){
         lsm6dsr_xl_data_rate_set(&dev_ctx, LSM6DSR_XL_ODR_OFF);
         lsm6dsr_gy_data_rate_set(&dev_ctx, LSM6DSR_GY_ODR_OFF);
-        lsm_data.package_number = 0;
         pm_device_action_run(&spispec,PM_DEVICE_ACTION_SUSPEND);
+        lsm_data.event_number = 0;
     }else{
         if(get_bit(en,ACC_BIT)){
             printk("set acc rate to %i \r\n",*lsm_rate);
@@ -298,7 +297,6 @@ int8_t init_lsm(){
 
     lsm_data.event_number = 0;
     lsm_data.event_size = 40;
-    lsm_data.package_number = 0;
 
     lsm_en = &lsm_data.config[0];
     lsm_rate = &lsm_data.config[1];

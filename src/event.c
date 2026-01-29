@@ -1,6 +1,6 @@
 #include "event.h"
 
-extern bool CLEARED = true;
+extern bool RESETTED = true;
 
 extern void phyphox_event_received(){
     printk("PHYPHOX EVENTHANDLER\r\n");
@@ -11,11 +11,19 @@ extern void phyphox_event_received(){
     FF: Sync
     */
 
-    if(event_data.config[0]==0x01 && CLEARED){
+    if(event_data.config[0]==0x01 && RESETTED){
         global_timestamp = k_uptime_ticks()/32768.0;
-        CLEARED=false;
+        RESETTED=false;
+        
+        /* room for improvement*/
+        bmp_data.current_event = 0;
+        lsm_data.event_number = 0;
+        event_data.RUNNING = true;
     }
     if(event_data.config[0]==0x02){
-        CLEARED=true;
-    }    
+        RESETTED=true;
+        event_data.RUNNING = false;
+        //bmp_data.current_event = 0;
+        //lsm_data.event_number = 0;
+    }
 };

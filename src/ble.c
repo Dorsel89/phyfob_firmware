@@ -15,7 +15,7 @@ static struct bt_gatt_attr *attr_lsm_gyr;
 
 DATALOGGING LOG;
 
-float global_timestamp = NAN;
+volatile float global_timestamp = NAN;
 
 static const struct bt_le_adv_param adv_param_normal = {
 	.options = BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_USE_NAME | BT_LE_ADV_OPT_FORCE_NAME_IN_AD,
@@ -257,7 +257,7 @@ static void bt_ready(void)
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	
-	CLEARED = true;
+	RESETTED = true;
 	en_logging(false);
 	OPERATING_MODE = MODE_PHYPHOX;
 	//basic_advertising();
@@ -297,6 +297,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		
 	enable_lsm(false);
 	sleep_bmp(true);
+	RESETTED = true;
 	
 	//OPERATING_MODE = MODE_BTHOME;
 	OPERATING_MODE = MODE_PHYPHOX;
@@ -345,6 +346,7 @@ static struct bt_conn_cb conn_callbacks = {
 
 void init_ble(){
 	k_work_init(&stop_adv, restart_ee_advertising);
+	event_data.RUNNING = false;
 	bt_enable(NULL);
 	bt_ready();
 	bt_conn_cb_register(&conn_callbacks);
@@ -361,24 +363,26 @@ extern void set_coincell_level(uint8_t val){
 
 extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){
 
-	if(ID == SENSOR_BMP581_ID){
-		bt_gatt_notify_uuid(NULL, &bmp_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
-		return;
-	}
-	if(ID == SENSOR_LSM6DSR_ACC_ID){
-		bt_gatt_notify(NULL,attr_lsm_acc,DATA,LEN);
-		return;
-	}
-	if(ID == SENSOR_LSM6DSR_GYR_ID){
-		bt_gatt_notify(NULL,attr_lsm_gyr,DATA,LEN);
-		return;
-	}
-	if(ID == SENSOR_HDC_ID){
-		bt_gatt_notify_uuid(NULL, &hdc_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
-		return;
-	}
-	if(ID == SENSOR_STCC4_ID){
-		bt_gatt_notify_uuid(NULL, &stcc4_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
-		return;
+	if(event_data.RUNNING){
+		if(ID == SENSOR_BMP581_ID){
+			bt_gatt_notify_uuid(NULL, &bmp_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_LSM6DSR_ACC_ID){
+			bt_gatt_notify(NULL,attr_lsm_acc,DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_LSM6DSR_GYR_ID){
+			bt_gatt_notify(NULL,attr_lsm_gyr,DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_HDC_ID){
+			bt_gatt_notify_uuid(NULL, &hdc_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_STCC4_ID){
+			bt_gatt_notify_uuid(NULL, &stcc4_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
 	}
 };
