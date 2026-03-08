@@ -7,11 +7,14 @@ STCC4 stcc4_data;
 LOGGING logging;
 PHYPHOX_EVENT event_data;
 HDC hdc_data;
+PHYFOB phyfob_config;
 //uint8_t OPERATING_MODE = MODE_BTHOME;
 uint8_t OPERATING_MODE = MODE_PHYPHOX;
 
 static struct bt_gatt_attr *attr_lsm_acc;
 static struct bt_gatt_attr *attr_lsm_gyr;
+
+static struct bt_le_conn_param custom_param;
 
 DATALOGGING LOG;
 
@@ -63,8 +66,8 @@ bt_le_adv_start(&adv_param_normal, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 K_TIMER_DEFINE(adv_timer, timer_handler, NULL);
 
 static const struct bt_le_conn_param conn_paramter = {
-	.interval_min = 12,
-	.interval_max = 15,
+	.interval_min = 24,
+	.interval_max = 40,
 	.latency = 0,
 	.timeout = 10
 };
@@ -109,6 +112,9 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 	}
 	if(attr->uuid == &event_uuid.uuid){
 		phyphox_event_received();
+	}
+	if(attr->uuid == &phyfob_cnfg.uuid){
+		phyfob_config_received(conn);
 	}
 	return len;
 };
@@ -172,6 +178,13 @@ BT_GATT_CHARACTERISTIC(&lsm_acc_uuid,
 			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_WRITE,
 			       NULL, config_submits, &stcc4_data.config[0]),
+	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	//phyfob config
+	BT_GATT_CHARACTERISTIC(&phyfob_cnfg,					
+			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_WRITE,
+			       NULL, config_submits, &phyfob_config.config[0]),
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	//EVENT SERVICE			
@@ -292,11 +305,14 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	k_timer_start(&adv_timer, K_SECONDS(10), K_NO_WAIT); //change back to energy efficient advertising after 1min
 	printk("Disconnected (reason 0x%02x)\n\r", reason);
 
-	en_logging(true);
-	BLE_PARAMETER_UPDATED = false;
 		
 	enable_lsm(false);
 	sleep_bmp(true);
+	sleep_stcc4(true);
+	sleep_hdc(true);
+	
+	en_logging(true);
+	BLE_PARAMETER_UPDATED = false;
 	RESETTED = true;
 	
 	//OPERATING_MODE = MODE_BTHOME;
@@ -359,6 +375,20 @@ void init_ble(){
 
 extern void set_coincell_level(uint8_t val){
 	bt_bas_set_battery_level(val);
+}
+
+uint8_t phyfob_config_received(struct bt_conn *conn){
+	//TODO
+	if(phyfob_config.config[0]==PHYFOB_CONN_PARAMTER){
+		//
+		custom_param.interval_min = phyfob_config.config[1];
+		custom_param.interval_max = phyfob_config.config[2];
+		custom_param.latency = phyfob_config.config[3];
+		custom_param.timeout = phyfob_config.config[4];
+
+		bt_conn_le_param_update(conn,&custom_param);
+	}
+
 }
 
 extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){

@@ -14,12 +14,9 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
 
-
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
-
-
 
 #define sensirion_hal_sleep_us sensirion_i2c_hal_sleep_usec
 
@@ -39,8 +36,6 @@ static const struct spi_config spi_cfg = {
     .cs = &spi_flash_cs,
 };
 
-
-
 int main(void)
 {
         printk("HELLOWORLD\r\n");
@@ -57,7 +52,7 @@ int main(void)
         //init_BAS();
        
         
-        const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(mx25r6435f));
+        const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(at25ff161a));
        
         if (!device_is_ready(flash_dev)) {
                 printk("SPI NOR Device nicht bereit\n");
@@ -68,7 +63,7 @@ int main(void)
         0xB9 for mx25r6435f
         0x79 for AT25FF161A
         */
-        uint8_t dpd_cmd = 0x79;
+        uint8_t dpd_cmd = 0xB9;
         int ret = spi_write(flash_dev, &spi_cfg, &(struct spi_buf_set){
                 .buffers = &(struct spi_buf){
                 .buf = &dpd_cmd,

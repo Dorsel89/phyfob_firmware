@@ -78,6 +78,10 @@ typedef struct {
 
 typedef struct {
 	uint8_t config[20];
+}PHYFOB;
+
+typedef struct {
+	uint8_t config[20];
 	bool RUNNING;
 }PHYPHOX_EVENT;
 
@@ -115,4 +119,6 @@ typedef struct {
 
 
 extern DATALOGGING LOG;
+extern PHYFOB phyfob_config;
+
 #endif // SENSORS_H

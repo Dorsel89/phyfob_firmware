@@ -19,6 +19,7 @@ extern void phyphox_event_received(){
         bmp_data.current_event = 0;
         lsm_data.event_number = 0;
         event_data.RUNNING = true;
+        printk("global reset\r\n");
     }
     if(event_data.config[0]==0x02){
         RESETTED=true;

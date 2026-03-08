@@ -20,7 +20,9 @@
 #include "stcc4Zephyr.h"
 #include "event.h"
 
-#define DEVICE_NAME "Keyfob"
+#define DEVICE_NAME "phyfob"
+
+#define PHYFOB_CONN_PARAMTER 0x01
 
 static uint8_t phyphox_data[20] = {0};
 static uint8_t config_data[20] = {0};
@@ -35,7 +37,7 @@ void basic_advertising();
 void en_logging(bool b);
 
 extern void set_coincell_level(uint8_t val);
-
+uint8_t phyfob_config_received(struct bt_conn *conn);
 static struct k_work stop_adv;
 void restart_ee_advertising();
 
@@ -64,8 +66,7 @@ static struct bt_uuid_128 hdc_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1
 static struct bt_uuid_128 stcc4_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf100b, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 static struct bt_uuid_128 stcc4_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf100c, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
-static struct bt_uuid_128 hardware_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1021, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a)); 
-static struct bt_uuid_128 hardware_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1022, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+static struct bt_uuid_128 phyfob_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1022, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
 static struct bt_uuid_128 event_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf0004, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a)); 
 
