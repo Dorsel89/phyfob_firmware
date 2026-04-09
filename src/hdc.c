@@ -69,7 +69,7 @@ void send_data_hdc()
         return;
     }
 
-    float timestamp = k_uptime_get() /1000.0;
+    float timestamp = k_uptime_ticks()/32768.0;
     hdc_data.timestamp = timestamp;
     hdc_data.array[0] = hdc_data.temperature;
     hdc_data.array[1] = hdc_data.humidity;

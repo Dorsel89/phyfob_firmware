@@ -118,7 +118,7 @@ void send_data_stcc4()
     }
     stcc4_data.co2 = co2_concentration_raw;
     stcc4_data.array[0]=stcc4_data.co2;
-    stcc4_data.array[1]=(k_uptime_get()/1000.0)-global_timestamp;
+    stcc4_data.array[1]=(k_uptime_ticks()/32768.0)-global_timestamp;
     printk("send new co2 data: co: %i \r\n",co2_concentration_raw);
 
     send_data(SENSOR_STCC4_ID, &stcc4_data.array, 4*2);

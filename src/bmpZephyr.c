@@ -189,7 +189,7 @@ static int8_t get_sensor_data(const struct bmp5_osr_odr_press_config *osr_odr_pr
 static void start_logging(){
     memset(LOG.data,NULL,176*LOG_MULTIPLIER);
     LOG.write_to_position=0;
-    LOG.logging_start = k_uptime_get()/1000.0;
+    LOG.logging_start = k_uptime_ticks()/32768.0;
     LOG.last_save=0;
     bmp_data.logging = true;
 }
@@ -202,7 +202,7 @@ extern void send_data_bmp(void){
     bmp5_error_codes_print_result("get_sensor_data", result);
 
     if(bmp_data.logging){
-        float currentime = (k_uptime_get()/1000.0);
+        float currentime = k_uptime_ticks()/32768.0;
         printk("currently in logging mode, store data! seconds: %f\r\n",currentime);
         
         //skip if we are under x seconds since last save
@@ -224,7 +224,7 @@ extern void send_data_bmp(void){
 
         bmp_data.array[0+bmp_data.current_event*3]=bmp_data.pressure;
         bmp_data.array[1+bmp_data.current_event*3]=bmp_data.temperature;
-        bmp_data.array[2+bmp_data.current_event*3]=(k_uptime_get()/1000.0)-global_timestamp;
+        bmp_data.array[2+bmp_data.current_event*3]=(k_uptime_ticks()/32768.0)-global_timestamp;
 
         bmp_data.current_event++;
         if(bmp_data.current_event == bmp_data.max_events){

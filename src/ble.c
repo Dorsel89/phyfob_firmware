@@ -242,7 +242,10 @@ static void bt_ready(void)
 	printk("Bluetooth initialized\n\r");
 
 	uint16_t serialNumber[1];
-	memcpy(&serialNumber[0], (uint8_t *)0x10001080, 2);
+	char ascii[1];
+	uint8_t* id_address = (uint8_t *)0x10001080;
+	memcpy(&serialNumber[0], id_address, 2);
+	memcpy(&ascii[0], id_address+2, 1);
 
 	if(serialNumber[0]==0x00 || serialNumber[0]==0xffff){
 		serialNumber[0]=0;
@@ -250,7 +253,7 @@ static void bt_ready(void)
 	printk("number: %i \r\n",serialNumber[0]);
 
 	char name[20];
-	sprintf(name, "phyfob %d\n", serialNumber[0]);	
+	sprintf(name, "phyfob %c%02d\n", ascii[0], serialNumber[0]);	
 	bt_set_name(name);
 
 
@@ -271,7 +274,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 {
 	
 	RESETTED = true;
-	en_logging(false);
+	logging.enable = false;
 	OPERATING_MODE = MODE_PHYPHOX;
 	//basic_advertising();
 	bt_le_adv_stop();
@@ -286,32 +289,21 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 }
 
-void enter_logging(){
-	//enable hdc, stcc4
-	logging.enable = true;
-	hdc_logging(true);
-	stcc4_logging(true);
-
-}
-void en_logging(bool b){
-	logging.enable = b;
-	hdc_logging(b);
-	stcc4_logging(b);
-}
-
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	bt_le_adv_start(&adv_param_fast, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	k_timer_start(&adv_timer, K_SECONDS(10), K_NO_WAIT); //change back to energy efficient advertising after 1min
 	printk("Disconnected (reason 0x%02x)\n\r", reason);
 
-		
+	logging.enable = true;
 	enable_lsm(false);
 	sleep_bmp(true);
 	sleep_stcc4(true);
 	sleep_hdc(true);
+
+	hdc_logging(logging.enable);
+	stcc4_logging(logging.enable);
 	
-	en_logging(true);
 	BLE_PARAMETER_UPDATED = false;
 	RESETTED = true;
 	
