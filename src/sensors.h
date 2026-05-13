@@ -41,7 +41,7 @@ typedef struct {
 	int current_event;
 	float pressure;
 	float temperature;
-	float timestamp;
+	//float timestamp;
 	float array[3*10];
 	uint8_t config[20];
 	uint8_t *enable;
@@ -49,6 +49,7 @@ typedef struct {
 	uint8_t *iir;
 	bool logging;
 	bool live;
+	int64_t timestmap;
 }BMP;
 
 typedef struct {
@@ -60,6 +61,7 @@ typedef struct {
 	int16_t gyr_array[3*40+2];//x,y,z,t
 	float gyr_time[40];
 	uint8_t config[20];
+	int64_t timestmap;
 }LSM;
 
 typedef struct {

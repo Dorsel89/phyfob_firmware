@@ -1,3 +1,6 @@
+&uicr {
+    nfct-pins-as-gpios;
+};
 /*
 / {
 	zephyr,user {

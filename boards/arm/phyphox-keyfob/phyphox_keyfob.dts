@@ -25,7 +25,6 @@
 		 zephyr,bt-c2h-uart = &uart0;
 		 zephyr,sram = &sram0;
 		 zephyr,flash = &flash0;
-		 mcuboot,flash = &at25ff161a;  /* Für Secondary-Slot */
 		 nordic,pm-ext-flash = &at25ff161a;
 
 		 zephyr,code-partition = &slot0_partition;
@@ -209,15 +208,11 @@ flash_spi_master: &spi2 {
 		};
 		slot0_partition: partition@c000 {
 			label = "image-0";
-			reg = <0x0000C000 0x37000>;
+			reg = <0x0000C000 0x00034000>;
 		};
-		slot1_partition: partition@43000  {
-			label = "image-1";
-			reg = <0x00043000 0x37000>;
-		};
-		storage_partition: partition@7a000 {
+		storage_partition: partition@40000 {
 			label = "storage";
-			reg = <0x0007A000 0x00006000>;
+			reg = <0x00040000 0x00004000>;
 		};
 	};
  };
@@ -229,7 +224,7 @@ flash_spi_master: &spi2 {
 
 		mcuboot_secondary: partition@0 {
 			label = "mcuboot_secondary";
-			reg = <0x00000000 0x37000>; /* Größe passend zu primary */
+			reg = <0x00000000 0x00034000>; /* Größe passend zu primary */
 		};
 
 		/* optional weitere Partitionen, z.B. FS, settings */

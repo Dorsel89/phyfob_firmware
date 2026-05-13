@@ -1,0 +1,11 @@
+/* STEP 1: Aktiviere den SPI Master und Flash für MCUboot */
+&spi2 {
+    status = "okay";
+};
+
+/* STEP 2: Markiere als externer Flash für PM */
+/{
+    chosen {
+        nordic,pm-ext-flash = &at25ff161a;
+    };
+};

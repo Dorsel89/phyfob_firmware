@@ -23,6 +23,9 @@
 #define DEVICE_NAME "phyfob"
 
 #define PHYFOB_CONN_PARAMTER 0x01
+#define PHYFOB_CUSTOM_NAME 0x02
+
+static struct bt_conn *last_connection;
 
 static uint8_t phyphox_data[20] = {0};
 static uint8_t config_data[20] = {0};

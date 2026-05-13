@@ -11,6 +11,7 @@
 #include "sensors.h"
 #include <math.h>
 
+#define STCC4_CALIBRATION 0x02
 const static struct device *stcc4_dev = DEVICE_DT_GET(DT_ALIAS(i2c));
 
 static struct k_timer timer_stcc4;

@@ -23,6 +23,7 @@
 #include <zephyr/drivers/spi.h>
 #define FLASH_LABEL "MX25R6435F"
 
+#define FIRMWARE_VERSION_STR "1.0.1"
 
 struct spi_cs_control spi_flash_cs = {
 	.gpio = SPI_CS_GPIOS_DT_SPEC_GET(DT_NODELABEL(flash_spi_master)),
@@ -56,13 +57,13 @@ int main(void)
        
         if (!device_is_ready(flash_dev)) {
                 printk("SPI NOR Device nicht bereit\n");
-                return;
         }
 
         /*
         0xB9 for mx25r6435f
         0x79 for AT25FF161A
         */
+       
         uint8_t dpd_cmd = 0xB9;
         int ret = spi_write(flash_dev, &spi_cfg, &(struct spi_buf_set){
                 .buffers = &(struct spi_buf){
@@ -79,5 +80,6 @@ int main(void)
         
         
         pm_device_action_run(flash_dev,PM_DEVICE_ACTION_SUSPEND);
+        
         return 0;
 }

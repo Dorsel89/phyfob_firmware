@@ -20,6 +20,7 @@ stmdev_ctx_t dev_ctx;
 
 static void lsmDataReady(const struct device *dev, struct gpio_callback *cb,uint32_t pins)
 {
+    lsm_data.timestmap = k_uptime_ticks()/32768.0;
 	k_work_submit(&work_lsm);
 }
 
@@ -88,7 +89,7 @@ extern void send_data_lsm(void){
         memcpy(&lsm_data.acc_array[lsm_data.event_number*3+0+2],&data_raw_acceleration[0],2*3);
         
         if(lsm_data.event_number==0 || *lsm_format == FORMAT_FLOAT){
-            lsm_data.acc_time[lsm_data.event_number]=(k_uptime_ticks()/32768.0)-global_timestamp;
+            lsm_data.acc_time[lsm_data.event_number]=(lsm_data.timestmap)-global_timestamp;
         }
     }
     if(get_bit(*lsm_en,GYR_BIT)){
@@ -97,7 +98,7 @@ extern void send_data_lsm(void){
         memcpy(&lsm_data.gyr_array[lsm_data.event_number*3+0+2],&data_raw_angular_rate[0],2*3);
         
         if(lsm_data.event_number==0 || *lsm_format == FORMAT_FLOAT){
-            lsm_data.gyr_time[lsm_data.event_number]=(k_uptime_ticks()/32768.0)-global_timestamp;
+            lsm_data.gyr_time[lsm_data.event_number]=(lsm_data.timestmap)-global_timestamp;
         }
     }    
     lsm_data.event_number++;

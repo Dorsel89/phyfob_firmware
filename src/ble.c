@@ -1,5 +1,9 @@
 #include "ble.h"
 
+#include <hal/nrf_nvmc.h>
+#include <nrfx.h>
+
+
 
 BMP bmp_data;
 LSM lsm_data;
@@ -243,9 +247,11 @@ static void bt_ready(void)
 
 	uint16_t serialNumber[1];
 	char ascii[1];
+	char ascii_custom[4];
 	uint8_t* id_address = (uint8_t *)0x10001080;
 	memcpy(&serialNumber[0], id_address, 2);
 	memcpy(&ascii[0], id_address+2, 1);
+	memcpy(&ascii_custom[0], id_address+4, 4);
 
 	if(serialNumber[0]==0x00 || serialNumber[0]==0xffff){
 		serialNumber[0]=0;
@@ -253,7 +259,15 @@ static void bt_ready(void)
 	printk("number: %i \r\n",serialNumber[0]);
 
 	char name[20];
-	sprintf(name, "phyfob %c%02d\n", ascii[0], serialNumber[0]);	
+	printk("1: %c 2: %c 3: %c 4: %c \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
+	printk("1: %i 2: %i 3: %i 4: %i \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
+	if(ascii_custom[0] == 0xff && ascii_custom[1] == 0xff && ascii_custom[2] == 0xff && ascii_custom[3] == 0xff){
+		sprintf(name, "phyfob %c%02d\n", ascii[0], serialNumber[0]);
+	}else{
+		sprintf(name, "phyfob %c%c%c%c\n", ascii_custom[3], ascii_custom[2],ascii_custom[1],ascii_custom[0]);	
+		printk("neuer custom name: %s \r\n",name);
+	}
+	
 	bt_set_name(name);
 
 
@@ -279,8 +293,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	//basic_advertising();
 	bt_le_adv_stop();
 	printk("Device with index %i trying to connect...\n\r",bt_conn_index(conn));
-	
-	bt_conn_le_param_update(conn,&conn_paramter);
+//	bt_conn_le_param_update(conn, &conn_paramter);
 	update_phy(conn);
 	if (err) {
 		printk("Connection failed (err 0x%02x)\n\r", err);
@@ -369,17 +382,85 @@ extern void set_coincell_level(uint8_t val){
 	bt_bas_set_battery_level(val);
 }
 
+static void parameter_work(struct k_work *work)
+{
+    bt_conn_le_param_update(last_connection,&custom_param);
+}
+K_WORK_DELAYABLE_DEFINE(my_delayed_work, parameter_work);
+
+
+static void nvmc_wait_ready(void)
+{
+	while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {
+	}
+}
+
+static int uicr_update_customer(uint32_t customer1)
+{
+	NRF_UICR_Type backup;
+
+	/* Gesamte UICR sichern, weil ERASEUICR alles löscht */
+	memcpy(&backup, NRF_UICR, sizeof(backup));
+
+	/* Gewünschte neue Werte setzen */
+	uint32_t* uicr = 0x10001080;
+	backup.CUSTOMER[0] = *uicr;
+	backup.CUSTOMER[1] = customer1;
+
+	/* UICR-Erase aktivieren */
+	NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Een;
+	nvmc_wait_ready();
+
+	/* Ganze UICR löschen */
+	NRF_NVMC->ERASEUICR = NVMC_ERASEUICR_ERASEUICR_Erase;
+	nvmc_wait_ready();
+
+	/* Schreibmodus aktivieren */
+	NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen;
+	nvmc_wait_ready();
+
+	/*
+	 * Ganze UICR zurückschreiben.
+	 * Nur Wörter != 0xFFFFFFFF müssen programmiert werden.
+	 */
+	volatile uint32_t *dst = (volatile uint32_t *)NRF_UICR;
+	const uint32_t *src = (const uint32_t *)&backup;
+
+	for (size_t i = 0; i < sizeof(NRF_UICR_Type) / sizeof(uint32_t); i++) {
+		if (src[i] != 0xFFFFFFFFu) {
+			dst[i] = src[i];
+			nvmc_wait_ready();
+		}
+	}
+
+	/* Wieder Read-only */
+	NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren;
+	nvmc_wait_ready();
+
+	return 0;
+}
+
 uint8_t phyfob_config_received(struct bt_conn *conn){
-	//TODO
 	if(phyfob_config.config[0]==PHYFOB_CONN_PARAMTER){
 		//
 		custom_param.interval_min = phyfob_config.config[1];
 		custom_param.interval_max = phyfob_config.config[2];
 		custom_param.latency = phyfob_config.config[3];
 		custom_param.timeout = phyfob_config.config[4];
+		printk("min %i, max %i, latency %i, timeout %i \r\n",custom_param.interval_min,custom_param.interval_max,custom_param.latency,custom_param.timeout);
+		
+		last_connection = conn;
+		k_work_schedule(&my_delayed_work, K_MSEC(200));
+	}else if (phyfob_config.config[0]==PHYFOB_CUSTOM_NAME)
+	{
+		uint32_t my_int32_value;
+		memcpy(&my_int32_value, phyfob_config.config[1], 4);
+		uicr_update_customer(my_int32_value);
+		k_msleep(100);
 
-		bt_conn_le_param_update(conn,&custom_param);
+		NVIC_SystemReset();
 	}
+	
 
 }
 

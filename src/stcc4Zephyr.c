@@ -2,9 +2,38 @@
 void submit_config_stcc4(){
     k_work_submit(&config_work_stcc4);
 }
+
+static void calibration_work(struct k_work *work)
+{
+    int16_t* my_frc_correction;
+    stcc4_stop_continuous_measurement();
+    k_sleep(K_MSEC(1200));
+    stcc4_perform_forced_recalibration(10*stcc4_data.config[1],my_frc_correction);
+    if(*my_frc_correction == 0xFFFF){
+        printk("STCC4 Calibration failed\r\n");
+    }else{
+        printk("STCC4 Calibrated\r\n");
+    }
+    
+    
+}
+K_WORK_DELAYABLE_DEFINE(stcc4_calibration_work, calibration_work);
+
 void set_config_stcc4() 
 {
     sleep_stcc4(true);
+
+    //CALIBRATION
+    if (stcc4_data.config[0]== STCC4_CALIBRATION)
+    {
+        printk("start stcc4 calibration \r\n");
+        //measure for 30s
+        stcc4_data.timer_interval = 100;
+        sleep_stcc4(false);
+        k_work_schedule(&stcc4_calibration_work,K_SECONDS(30));
+        return;
+    }
+    
     stcc4_data.timer_interval = stcc4_data.config[1]*100;
     printk("stcc4 config received \n");
     printk("stcc4 interval: %i\n",stcc4_data.timer_interval);
@@ -118,7 +147,7 @@ void send_data_stcc4()
     }
     stcc4_data.co2 = co2_concentration_raw;
     stcc4_data.array[0]=stcc4_data.co2;
-    stcc4_data.array[1]=(k_uptime_ticks()/32768.0)-global_timestamp;
+    
     printk("send new co2 data: co: %i \r\n",co2_concentration_raw);
 
     send_data(SENSOR_STCC4_ID, &stcc4_data.array, 4*2);
@@ -126,5 +155,6 @@ void send_data_stcc4()
 
 void stcc4_data_ready()
 {
+    stcc4_data.array[1]=(k_uptime_ticks()/32768.0)-global_timestamp;
 	k_work_submit(&work_stcc4);
 }
