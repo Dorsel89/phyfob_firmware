@@ -1,10 +1,10 @@
 # Copyright (c) 2021 Nordic Semiconductor ASA
 # SPDX-License-Identifier: Apache-2.0
 
-if BOARD_PHYPHOX_KEYFOB
+if BOARD_PHYFOB
 
 config BOARD
-	default "phyphox_keyfob"
+	default "phyfob"
 
 if USB
 
