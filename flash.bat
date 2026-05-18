@@ -36,7 +36,7 @@ nrfjprog --family NRF52 --memwr 0x10001080 --val %VAL%
 if %errorlevel% neq 0 goto :error
 
 echo 2/5: Program ^& Verify HEX...
-nrfjprog --family NRF52 --program build/zephyr/merged.hex --verify
+nrfjprog --family NRF52 --program build_3v3/merged.hex --verify
 if %errorlevel% neq 0 goto :error
 
 echo 4/4: Reset...

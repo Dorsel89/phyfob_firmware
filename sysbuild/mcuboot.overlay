@@ -1,0 +1,62 @@
+/* STEP 1: Aktiviere den SPI Master und Flash für MCUboot */
+/*
+&spi2 {
+    status = "okay";
+};
+*/
+
+/* STEP 2: Markiere als externer Flash für PM */
+&pinctrl {
+	spi_flash_default: spi_flash_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+					<NRF_PSEL(SPIM_MISO, 0, 10)>;
+		};
+	};
+	spi_flash_sleep: spi_flash_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+					<NRF_PSEL(SPIM_MISO, 0, 10)>;
+			low-power-enable;
+		};
+	};		
+};
+
+&spi2 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	pinctrl-0 = <&spi_flash_default>;
+	pinctrl-1 = <&spi_flash_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio0 6 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+	
+	at25ff161a: at25ff161a@0 {
+		status = "okay";
+        compatible = "jedec,spi-nor";
+        reg = <0>;
+        spi-max-frequency = <8000000>;
+        label = "AT25FF161A";
+		/*[c2 28 15] [1f 46 08] (mx25)(at25)*/
+        jedec-id = [c2 28 15];
+        size = <0x200000>;/* 2 MByte */	
+		has-dpd;
+		t-enter-dpd = <3000>;
+		t-exit-dpd = <160000>;
+		
+    };
+	
+	
+};
+/ {
+    aliases {
+        spi2= &spi2;
+    };
+};
+/{
+    chosen {
+        nordic,pm-ext-flash = &at25ff161a;
+    };
+};
+

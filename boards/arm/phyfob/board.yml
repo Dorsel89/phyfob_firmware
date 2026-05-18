@@ -1,0 +1,6 @@
+board:
+  name: phyfob
+  full_name: phyfob
+  vendor: phyphox
+  socs:
+  - name: nrf52832

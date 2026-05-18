@@ -454,7 +454,7 @@ uint8_t phyfob_config_received(struct bt_conn *conn){
 	}else if (phyfob_config.config[0]==PHYFOB_CUSTOM_NAME)
 	{
 		uint32_t my_int32_value;
-		memcpy(&my_int32_value, phyfob_config.config[1], 4);
+		memcpy(&my_int32_value, &phyfob_config.config[1], 4);
 		uicr_update_customer(my_int32_value);
 		k_msleep(100);
 
