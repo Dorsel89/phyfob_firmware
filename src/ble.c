@@ -69,13 +69,6 @@ bt_le_adv_start(&adv_param_normal, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
 K_TIMER_DEFINE(adv_timer, timer_handler, NULL);
 
-static const struct bt_le_conn_param conn_paramter = {
-	.interval_min = 24,
-	.interval_max = 40,
-	.latency = 0,
-	.timeout = 10
-};
-
 void update_phy(struct bt_conn *conn) {
 
 	int err;
@@ -293,7 +286,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	//basic_advertising();
 	bt_le_adv_stop();
 	printk("Device with index %i trying to connect...\n\r",bt_conn_index(conn));
-//	bt_conn_le_param_update(conn, &conn_paramter);
+
 	update_phy(conn);
 	if (err) {
 		printk("Connection failed (err 0x%02x)\n\r", err);
@@ -305,7 +298,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	bt_le_adv_start(&adv_param_fast, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-	k_timer_start(&adv_timer, K_SECONDS(10), K_NO_WAIT); //change back to energy efficient advertising after 1min
+	k_timer_start(&adv_timer, K_SECONDS(10), K_NO_WAIT); //change back to energy efficient advertising after 10s
 	printk("Disconnected (reason 0x%02x)\n\r", reason);
 
 	logging.enable = true;

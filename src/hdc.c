@@ -42,6 +42,7 @@ extern void hdc_logging(bool l){
 
 void hdc_data_ready()
 {
+    hdc_data.timestamp = k_uptime_ticks();
 	k_work_submit(&work_hdc);
 }
 
@@ -69,11 +70,9 @@ void send_data_hdc()
         return;
     }
 
-    float timestamp = k_uptime_ticks()/32768.0;
-    hdc_data.timestamp = timestamp;
     hdc_data.array[0] = hdc_data.temperature;
     hdc_data.array[1] = hdc_data.humidity;
-    hdc_data.array[2] = hdc_data.timestamp-global_timestamp;
+    hdc_data.array[2] = (hdc_data.timestamp/32768.0)-global_timestamp;
 
     
     send_data(SENSOR_HDC_ID, &hdc_data.array, 4*3);

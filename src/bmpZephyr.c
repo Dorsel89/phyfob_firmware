@@ -72,7 +72,7 @@ static struct gpio_callback bmpInt_cb_data;
 
 static void bmpDataReady(const struct device *dev, struct gpio_callback *cb,uint32_t pins)
 {
-    bmp_data.timestmap = k_uptime_ticks()/32768.0;
+    bmp_data.timestmap = k_uptime_ticks();
 	k_work_submit(&work_bmp);
 }
 
@@ -203,7 +203,7 @@ extern void send_data_bmp(void){
     bmp5_error_codes_print_result("get_sensor_data", result);
 
     if(bmp_data.logging){
-        float currentime = bmp_data.timestmap;
+        float currentime = bmp_data.timestmap/32768.0;
         printk("currently in logging mode, store data! seconds: %f\r\n",currentime);
         
         //skip if we are under x seconds since last save
@@ -225,7 +225,7 @@ extern void send_data_bmp(void){
 
         bmp_data.array[0+bmp_data.current_event*3]=bmp_data.pressure;
         bmp_data.array[1+bmp_data.current_event*3]=bmp_data.temperature;
-        bmp_data.array[2+bmp_data.current_event*3]=bmp_data.timestmap-global_timestamp;
+        bmp_data.array[2+bmp_data.current_event*3]=(bmp_data.timestmap/32768.0)-global_timestamp;
 
         bmp_data.current_event++;
         if(bmp_data.current_event == bmp_data.max_events){

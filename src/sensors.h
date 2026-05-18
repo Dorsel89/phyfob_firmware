@@ -61,7 +61,7 @@ typedef struct {
 	int16_t gyr_array[3*40+2];//x,y,z,t
 	float gyr_time[40];
 	uint8_t config[20];
-	int64_t timestmap;
+	int64_t timestamp;
 }LSM;
 
 typedef struct {
@@ -90,7 +90,7 @@ typedef struct {
 typedef struct {
 	float humidity;
 	float temperature;
-	float timestamp;
+	int64_t timestamp;
 	float array[3];
 	uint16_t timer_interval;
 	uint8_t config[20];
