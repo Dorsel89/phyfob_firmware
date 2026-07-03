@@ -10,6 +10,7 @@
 #include "hdc.h"
 #include "lsm6dsr.h"
 #include "stcc4Zephyr.h"
+#include "bmv080Zephyr.h"
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
@@ -51,6 +52,8 @@ int main(void)
         init_lsm();
         init_stcc4();
         //init_BAS();
+        printk("BMV\r\n");
+        init_bmv080();
        
         
         const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(at25ff161a));

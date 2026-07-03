@@ -19,6 +19,7 @@
 #include "bmpZephyr.h"
 #include "lsm6dsr.h"
 #include "stcc4Zephyr.h"
+#include "bmv080Zephyr.h"
 #include "event.h"
 
 #define DEVICE_NAME "phyfob"

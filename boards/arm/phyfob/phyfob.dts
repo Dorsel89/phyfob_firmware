@@ -6,7 +6,7 @@
 
  /dts-v1/;
  #include <nordic/nrf52832_qfaa.dtsi>
- 
+
  / {
 	 model = "phyfob";
 	 compatible = "phyphox,phyfob";
@@ -15,8 +15,9 @@
 		spi= &spi1;
 		spi2= &spi2;
 		hdc = &hdc_node;
+		bmv080 = &bmv080_node;
 	 };
- 
+
 	 chosen {
 		 zephyr,console = &uart0;
 		 zephyr,shell-uart = &uart0;
@@ -28,13 +29,13 @@
 		 nordic,pm-ext-flash = &at25ff161a;
 		 zephyr,code-partition = &slot0_partition;
 	 };
- 
+
 	 leds {
-		 compatible = "gpio-leds";		 
+		 compatible = "gpio-leds";
 	 };
 	buttons {
 		compatible = "gpio-keys";
-		button0: button_0 { // 
+		button0: button_0 { //
 			gpios = <&gpio0 11 (GPIO_ACTIVE_HIGH)>;
 			label = "lsm data ready";
 		};
@@ -51,14 +52,14 @@
 			psels = <NRF_PSEL(TWIM_SDA, 0, 19)>, <NRF_PSEL(TWIM_SCL, 0, 20)>;
 			bias-disable;
 		};
-		
+
 	};
     i2c0_sleep: i2c0_sleep {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 19)>, <NRF_PSEL(TWIM_SCL, 0, 20)>;
 			low-power-enable;
 		};
-		
+
 	};
 	spi_master_default: spi_master_default {
 		group1 {
@@ -89,7 +90,7 @@
 					<NRF_PSEL(SPIM_MISO, 0, 10)>;
 			low-power-enable;
 		};
-	};		
+	};
 };
 
  i2c_0: &i2c0 {
@@ -108,6 +109,12 @@
 		reg = <0x40>;
 		label = "hdc1080";
 	};
+	bmv080_node: bmv080@54 {
+        	compatible = "bosch,i2c-device";
+        	reg = <0x54>; /* This is the 7-bit I2C address */
+        	status = "okay";
+    	};
+
 };
 
 my_spi_master: &spi1 {
@@ -117,14 +124,14 @@ my_spi_master: &spi1 {
 	pinctrl-1 = <&spi_master_sleep>;
 	pinctrl-names = "default", "sleep";
 	cs-gpios = <&gpio0 15 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-	
+
 	lsm6dsr: lsm6dsr@0 {
 		status = "okay";
 		compatible = "vnd,spi-device";
 		reg = <0>;
 		spi-max-frequency = < 8000000 >;
 	};
-	
+
 };
 
 flash_spi_master: &spi2 {
@@ -134,7 +141,7 @@ flash_spi_master: &spi2 {
 	pinctrl-1 = <&spi_flash_sleep>;
 	pinctrl-names = "default", "sleep";
 	cs-gpios = <&gpio0 6 ( GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-	
+
 	at25ff161a: at25ff161a@0 {
 		status = "okay";
         compatible = "jedec,spi-nor";
@@ -143,35 +150,35 @@ flash_spi_master: &spi2 {
         label = "AT25FF161A";
 		/*[c2 28 15] [1f 46 08] (mx25)(at25)*/
         jedec-id = [c2 28 15];
-        size = <0x200000>;/* 2 MByte */	
+        size = <0x200000>;/* 2 MByte */
 		has-dpd;
 		t-enter-dpd = <3000>;
 		t-exit-dpd = <160000>;
     };
-	
-	
+
+
 };
- 
+
  &adc {
 	 status = "disabled";
  };
- 
- 
+
+
  &gpiote {
 	 status = "okay";
  };
- 
+
  &gpio0 {
 	 status = "okay";
 	 sense-edge-mask = < 0xffffffff >;
  };
- 
+
  /*
  &gpio1 {
 	 status = "okay";
  };
  */
- 
+
  &uart0 {
 	 compatible = "nordic,nrf-uarte";
 	 status = "disabled";
@@ -181,9 +188,9 @@ flash_spi_master: &spi2 {
 	 //rts-pin = <5>;
 	 //cts-pin = <7>;
  };
- 
+
  &flash0 {
- 
+
 	partitions {
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
@@ -211,11 +218,10 @@ flash_spi_master: &spi2 {
 
 		slot1_partition: partition@0 {
 			label = "image-1";
-			reg = <0x00000000 0x00034000>; 
+			reg = <0x00000000 0x00034000>;
 		};
 
 		/* optional weitere Partitionen, z.B. FS, settings */
 	};
 };
 
-  

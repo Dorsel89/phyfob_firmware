@@ -355,7 +355,7 @@ static struct bt_conn_cb conn_callbacks = {
 	.le_param_req = le_param_req,
 	.le_param_updated = le_param_updated,
 	.le_phy_updated = le_phy_updated,
-	.le_data_len_updated = le_data_len_updated,
+	//.le_data_len_updated = le_data_len_updated,
 };
 
 void init_ble(){
