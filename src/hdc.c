@@ -46,7 +46,7 @@ void hdc_data_ready()
 	k_work_submit(&work_hdc);
 }
 
-void send_data_hdc()
+void send_data_hdc(struct k_work *work)
 {
     sensor_sample_fetch(hdc_dev);
     sensor_channel_get(hdc_dev, SENSOR_CHAN_AMBIENT_TEMP, &hdc_temp);
@@ -55,8 +55,8 @@ void send_data_hdc()
     hdc_data.temperature = sensor_value_to_float(&hdc_temp);
     hdc_data.humidity = sensor_value_to_float(&hdc_humid);
     if(OPERATING_MODE == MODE_BTHOME){
-        int16_t temp = (int16_t)hdc_data.temperature*100;
-        uint16_t hum = (int16_t)hdc_data.humidity*100;
+        int16_t temp = (int16_t)(hdc_data.temperature*100);
+        uint16_t hum = (uint16_t)(hdc_data.humidity*100);
         printk("new data hdc t: %i h: %i \r\n",temp,hum);
         uint8_t dat[4];
         memcpy(&dat[0],&temp,2);
@@ -78,7 +78,7 @@ void send_data_hdc()
     send_data(SENSOR_HDC_ID, &hdc_data.array, 4*3);
 }
 
-void set_config_hdc() 
+void set_config_hdc(struct k_work *work)
 {
     sleep_hdc(true);
     hdc_data.timer_interval = hdc_data.config[1]*100;

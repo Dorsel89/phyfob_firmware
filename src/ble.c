@@ -1,9 +1,19 @@
 #include "ble.h"
 
+#include <stdio.h>
 #include <hal/nrf_nvmc.h>
 #include <nrfx.h>
 
+struct bt_conn *last_connection;
+uint8_t config_data[20] = {0};
+struct k_work stop_adv;
+bool BLE_PARAMETER_UPDATED;
+bool notify_enabled;
 
+void ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+	notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? 1 : 0;
+}
 
 BMP bmp_data;
 LSM lsm_data;
@@ -62,7 +72,7 @@ static void timer_handler(struct k_timer *timer) {
 	return;
 }
 
-void restart_ee_advertising(){
+void restart_ee_advertising(struct k_work *work){
 bt_le_adv_stop();
 bt_le_adv_start(&adv_param_normal, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 }
@@ -102,7 +112,7 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 		submit_config_hdc();
 	}
 	if(attr->uuid == &lsm_cnfg.uuid){
-		adjust_lsm_configuration();
+		adjust_lsm_configuration(NULL);
 	}
 	if(attr->uuid == &stcc4_cnfg.uuid){
 		submit_config_stcc4();
@@ -396,7 +406,7 @@ static int uicr_update_customer(uint32_t customer1)
 	memcpy(&backup, NRF_UICR, sizeof(backup));
 
 	/* Gewünschte neue Werte setzen */
-	uint32_t* uicr = 0x10001080;
+	uint32_t* uicr = (uint32_t*)0x10001080;
 	backup.CUSTOMER[0] = *uicr;
 	backup.CUSTOMER[1] = customer1;
 
@@ -453,8 +463,8 @@ uint8_t phyfob_config_received(struct bt_conn *conn){
 
 		NVIC_SystemReset();
 	}
-	
 
+	return 0;
 }
 
 extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){

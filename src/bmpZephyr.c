@@ -1,22 +1,16 @@
 #include "bmpZephyr.h"
+#include "ble.h"
 
 static uint8_t dev_addr;
 static struct bmp5_osr_odr_press_config osr_odr_press_cfg = { 0 };
 
 BMP5_INTF_RET_TYPE bmp5_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
-    uint8_t device_addr = *(uint8_t*)intf_ptr;
-
-    (void)intf_ptr;
     return i2c_burst_read(intf_ptr,BMP581_I2C_ADDR,reg_addr,reg_data,length);
 }
 
 BMP5_INTF_RET_TYPE bmp5_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
-    uint8_t device_addr = *(uint8_t*)intf_ptr;
-
-    (void)intf_ptr;
-
     return i2c_burst_write(intf_ptr,BMP581_I2C_ADDR,reg_addr,reg_data,length);
 }
 
@@ -198,7 +192,7 @@ static void stop_logging(){
     bmp_data.logging = false;
 }
 
-extern void send_data_bmp(void){
+extern void send_data_bmp(struct k_work *work){
     uint8_t result = get_sensor_data(&osr_odr_press_cfg, &bmp581_dev);
     bmp5_error_codes_print_result("get_sensor_data", result);
 
@@ -296,25 +290,28 @@ extern int8_t init_bmp(){
 }
 
 extern uint8_t sleep_bmp(bool SLEEP){
+    uint8_t rslt;
     if(SLEEP){
-            uint8_t rslt = bmp5_set_power_mode(BMP5_POWERMODE_DEEP_STANDBY, &bmp581_dev);
+        rslt = bmp5_set_power_mode(BMP5_POWERMODE_DEEP_STANDBY, &bmp581_dev);
     }else{
         if(bmp_data.logging == true && bmp_data.live == false){
-            bmp5_set_power_mode(BMP5_POWERMODE_NORMAL, &bmp581_dev);
+            rslt = bmp5_set_power_mode(BMP5_POWERMODE_NORMAL, &bmp581_dev);
         }else{
-            bmp5_set_power_mode(BMP5_POWERMODE_CONTINOUS, &bmp581_dev);
+            rslt = bmp5_set_power_mode(BMP5_POWERMODE_CONTINOUS, &bmp581_dev);
         }
-    }    
+    }
+    return rslt;
 }
 
 extern uint8_t bmp_loggingmode(){
     //TODO
     uint8_t rslt = bmp5_set_power_mode(BMP5_POWERMODE_DEEP_STANDBY, &bmp581_dev);
-    bmp_data.oversampling_p = 0x04;
+    *bmp_data.oversampling_p = 0x04;
     *bmp_data.iir = 0x01;
-    osr_odr_press_cfg.osr_p=*bmp_data.oversampling_p;   
+    osr_odr_press_cfg.osr_p=*bmp_data.oversampling_p;
     set_config(&osr_odr_press_cfg, &bmp581_dev);
     sleep_bmp(false);
+    return rslt;
 }
 
 void submit_config_bmp(){
@@ -391,7 +388,7 @@ void submit_config_bmp(){
     bmp_data.enable = &bmp_data.config[0];
     bmp_data.oversampling_p = &bmp_data.config[1];
     bmp_data.iir = &bmp_data.config[2];
-    osr_odr_press_cfg.osr_p= &bmp_data.oversampling_p;
+    osr_odr_press_cfg.osr_p= *bmp_data.oversampling_p;
     
     bmp_data.current_event=0;
     

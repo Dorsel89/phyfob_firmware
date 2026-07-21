@@ -26,10 +26,9 @@
 #define PHYFOB_CONN_PARAMTER 0x01
 #define PHYFOB_CUSTOM_NAME 0x02
 
-static struct bt_conn *last_connection;
+extern struct bt_conn *last_connection;
 
-static uint8_t phyphox_data[20] = {0};
-static uint8_t config_data[20] = {0};
+extern uint8_t config_data[20];
 
 void init_ble();
 
@@ -42,17 +41,13 @@ void basic_advertising();
 
 extern void set_coincell_level(uint8_t val);
 uint8_t phyfob_config_received(struct bt_conn *conn);
-static struct k_work stop_adv;
-void restart_ee_advertising();
+extern struct k_work stop_adv;
+void restart_ee_advertising(struct k_work *work);
 
-static bool BLE_PARAMETER_UPDATED;
+extern bool BLE_PARAMETER_UPDATED;
 
-static bool notify_enabled;
-static void ccc_cfg_changed(const struct bt_gatt_attr *attr,
-				 uint16_t value)
-{
-	notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? 1 : 0;
-}
+extern bool notify_enabled;
+void ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value);
 
 static struct bt_uuid_128 data_service_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1001, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 static struct bt_uuid_128 event_service_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf0001, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));

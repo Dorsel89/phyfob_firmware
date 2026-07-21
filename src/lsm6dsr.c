@@ -1,4 +1,5 @@
 #include "lsm6dsr.h"
+#include "ble.h"
 
 static const struct gpio_dt_spec lsmInt = GPIO_DT_SPEC_GET_OR(LSM_INT, gpios,{0});
 static struct gpio_callback lsmInt_cb_data;
@@ -10,12 +11,7 @@ struct spi_dt_spec spispec = SPI_DT_SPEC_GET(DT_NODELABEL(lsm6dsr), SPIOP, 0);
 
 static int16_t data_raw_acceleration[3];
 static int16_t data_raw_angular_rate[3];
-static int16_t data_raw_temperature;
-static float acceleration_mg[3];
-static float angular_rate_mdps[3];
-static float temperature_degC;
 static uint8_t whoamI, rst;
-static uint8_t tx_buffer[1000];
 stmdev_ctx_t dev_ctx;
 
 static void lsmDataReady(const struct device *dev, struct gpio_callback *cb,uint32_t pins)
@@ -28,10 +24,10 @@ uint8_t get_bit(uint8_t value, uint8_t n) {
     return (value >> n) & 1;
 }
 
-extern void adjust_lsm_configuration(void){
+extern void adjust_lsm_configuration(struct k_work *work){
     //enable, rate, range acc, range gyr, format, eventsize, average
     enable_lsm(false);
-    pm_device_action_run(&spispec, PM_DEVICE_ACTION_RESUME);
+    pm_device_action_run(spispec.bus, PM_DEVICE_ACTION_RESUME);
     if(DEBUG){printk("new config:\n\r");};
     if(DEBUG){printk("0 enable: %i\n\r",*lsm_en);};
     if(DEBUG){printk("1 rate: %i\n\r", *lsm_rate);};
@@ -69,6 +65,7 @@ float get_gyr_si(int16_t lsb){
     }else if(*lsm_range_gyr == LSM6DSR_4000dps){
         return lsm6dsr_from_fs4000dps_to_mdps(lsb)/1000.0;
     }
+    return 0.0f;
 }
 float get_acc_si(int16_t lsb){
     if(*lsm_range_acc == LSM6DSR_2g){
@@ -80,8 +77,9 @@ float get_acc_si(int16_t lsb){
     }else if(*lsm_range_acc == LSM6DSR_16g){
         return lsm6dsr_from_fs16g_to_mg(lsb)/1000.0;
     }
+    return 0.0f;
 }
-extern void send_data_lsm(void){
+extern void send_data_lsm(struct k_work *work){
        
     if(get_bit(*lsm_en,ACC_BIT)){
         memset(data_raw_acceleration, 0x00, 3 * sizeof(int16_t));
@@ -167,22 +165,8 @@ int8_t configure_int(){
     gpio_init_callback(&lsmInt_cb_data, lsmDataReady, BIT(lsmInt.pin));
     gpio_add_callback(lsmInt.port, &lsmInt_cb_data);
 
+    return 0;
 }
-
-
-static struct k_poll_signal spi_done_sig = K_POLL_SIGNAL_INITIALIZER(spi_done_sig);
-
-struct spi_cs_control spim_cs = {
-	.gpio = SPI_CS_GPIOS_DT_SPEC_GET(DT_NODELABEL(reg_my_spi_master)),
-	.delay = 0,
-};
-static const struct spi_config spi_cfg = {
-	.operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB |
-				 SPI_MODE_CPOL | SPI_MODE_CPHA,
-	.frequency = 125000,
-	.slave = 1,
-	.cs = &spim_cs,
-};
 
 
 static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
@@ -197,14 +181,13 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
 
 	transmit_buffers[0].buf = &address;
 	transmit_buffers[0].len = 1;
-	transmit_buffers[1].buf = bufp;
+	transmit_buffers[1].buf = (uint8_t *)bufp;
 	transmit_buffers[1].len = len;
 
 
 	transmit_buffer_set.buffers = transmit_buffers;
 	transmit_buffer_set.count = 2;
 
-	//ret = spi_write(lsm_dev,&spi_cfg, &transmit_buffer_set);
     ret = spi_write_dt(&spispec, &transmit_buffer_set);
     
 	k_usleep(2);
@@ -215,8 +198,8 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
 static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
                              uint16_t len){
 
-    uint8_t ret;
-	
+    int ret;
+
     uint8_t address[1];
 	struct spi_buf transmit_buffer;
 	struct spi_buf_set transmit_buffer_set;
@@ -244,15 +227,8 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
 		printk("spi_transceive_dt() failed, err: %d", ret);
 		return ret;
 	}
-    //ret = spi_transceive(lsm_dev,&spi_cfg, &transmit_buffer_set, &receive_buffers_set);
-	//k_usleep(2);
 
 	return ret;
-}
-
-static void tx_com(uint8_t *tx_buffer, uint16_t len)
-{
-    //TODO?
 }
 
 static void platform_delay(uint32_t ms)
@@ -260,17 +236,12 @@ static void platform_delay(uint32_t ms)
     k_msleep(ms);
 }
 
-static void platform_init(void)
-{
-    //not needed?
-}
-
 uint8_t enable_lsm(uint8_t en){
-    pm_device_action_run(&spispec, PM_DEVICE_ACTION_RESUME);
+    pm_device_action_run(spispec.bus, PM_DEVICE_ACTION_RESUME);
     if(en == 0){
         lsm6dsr_xl_data_rate_set(&dev_ctx, LSM6DSR_XL_ODR_OFF);
         lsm6dsr_gy_data_rate_set(&dev_ctx, LSM6DSR_GY_ODR_OFF);
-        pm_device_action_run(&spispec,PM_DEVICE_ACTION_SUSPEND);
+        pm_device_action_run(spispec.bus,PM_DEVICE_ACTION_SUSPEND);
         lsm_data.event_number = 0;
     }else{
         if(get_bit(en,ACC_BIT)){
@@ -285,7 +256,7 @@ uint8_t enable_lsm(uint8_t en){
             lsm6dsr_gy_data_rate_set(&dev_ctx, LSM6DSR_GY_ODR_OFF);
         }
     }
-    return;
+    return 0;
 }
 
 int8_t init_lsm(){
@@ -310,7 +281,7 @@ int8_t init_lsm(){
     lsm6dsr_device_id_get(&dev_ctx, &whoamI);
     if (whoamI != LSM6DSR_ID){
         printk("LSM6DSR_ID not found. I got the id: %i \r\n", whoamI);
-        return;
+        return -1;
     }
     lsm6dsr_reset_set(&dev_ctx, PROPERTY_ENABLE);
     do {
@@ -346,4 +317,6 @@ int8_t init_lsm(){
     lsm6dsr_xl_filter_lp2_set(&dev_ctx, PROPERTY_DISABLE);
 
     enable_lsm(0);
+
+    return 0;
 }

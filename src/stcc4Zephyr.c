@@ -1,25 +1,24 @@
 #include "stcc4Zephyr.h"
+#include "ble.h"
 void submit_config_stcc4(){
     k_work_submit(&config_work_stcc4);
 }
 
 static void calibration_work(struct k_work *work)
 {
-    int16_t* my_frc_correction;
+    int16_t my_frc_correction;
     stcc4_stop_continuous_measurement();
     k_sleep(K_MSEC(1200));
-    stcc4_perform_forced_recalibration(10*stcc4_data.config[1],my_frc_correction);
-    if(*my_frc_correction == 0xFFFF){
+    stcc4_perform_forced_recalibration(10*stcc4_data.config[1],&my_frc_correction);
+    if(my_frc_correction == 0xFFFF){
         printk("STCC4 Calibration failed\r\n");
     }else{
         printk("STCC4 Calibrated\r\n");
     }
-    
-    
 }
 K_WORK_DELAYABLE_DEFINE(stcc4_calibration_work, calibration_work);
 
-void set_config_stcc4() 
+void set_config_stcc4(struct k_work *work)
 {
     sleep_stcc4(true);
 
@@ -60,7 +59,7 @@ extern int8_t init_stcc4(){
         k_msleep(200);
         error = stcc4_stop_continuous_measurement();
         if(loop>=3){
-            return;
+            return error;
         }
         loop+=1;
     }
@@ -93,7 +92,8 @@ extern uint8_t sleep_stcc4(bool SLEEP){
             stcc4_start_continuous_measurement();
         }
         k_timer_start(&timer_stcc4, K_MSEC(stcc4_data.timer_interval), K_MSEC(stcc4_data.timer_interval));
-    }    
+    }
+    return 0;
 }
 
 extern uint8_t stcc4_compensate(float t, float rh){
@@ -105,8 +105,8 @@ extern uint8_t stcc4_compensate(float t, float rh){
         stcc4_set_rht_compensation(t_u16,rh_u16);
         stcc4_enter_sleep_mode();
     }
-    
-    return;
+
+    return 0;
 }
 
 extern void stcc4_logging(bool l){
@@ -117,7 +117,7 @@ extern void stcc4_logging(bool l){
     }
 }
 
-void send_data_stcc4()
+void send_data_stcc4(struct k_work *work)
 {
     int16_t co2_concentration_raw = 0;
     uint16_t temperature_raw = 0;

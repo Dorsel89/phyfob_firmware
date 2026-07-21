@@ -25,16 +25,14 @@
 
 #define FIRMWARE_VERSION_STR "1.0.1"
 
-struct spi_cs_control spi_flash_cs = {
-	.gpio = SPI_CS_GPIOS_DT_SPEC_GET(DT_NODELABEL(flash_spi_master)),
-	.delay = 0,
-};
-
 static const struct spi_config spi_cfg = {
     .frequency = 8000000,
     .operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
     .slave = 0,
-    .cs = &spi_flash_cs,
+    .cs = {
+        .gpio = SPI_CS_GPIOS_DT_SPEC_GET(DT_NODELABEL(flash_spi_master)),
+        .delay = 0,
+    },
 };
 
 int main(void)
