@@ -20,6 +20,7 @@
 #include "lsm6dsr.h"
 #include "stcc4Zephyr.h"
 #include "event.h"
+#include "datalog.h"
 
 #define DEVICE_NAME "phyfob"
 
@@ -66,6 +67,10 @@ static struct bt_uuid_128 stcc4_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcdd
 static struct bt_uuid_128 stcc4_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf100c, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
 static struct bt_uuid_128 phyfob_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1022, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+
+//DATALOG
+static struct bt_uuid_128 datalog_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1010, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+static struct bt_uuid_128 datalog_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1011, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
 static struct bt_uuid_128 event_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf0004, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a)); 
 

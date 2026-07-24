@@ -22,6 +22,7 @@ LOGGING logging;
 PHYPHOX_EVENT event_data;
 HDC hdc_data;
 PHYFOB phyfob_config;
+DATALOG_CONFIG datalog_config;
 //uint8_t OPERATING_MODE = MODE_BTHOME;
 uint8_t OPERATING_MODE = MODE_PHYPHOX;
 
@@ -123,6 +124,23 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 	if(attr->uuid == &phyfob_cnfg.uuid){
 		phyfob_config_received(conn);
 	}
+	if(attr->uuid == &datalog_cnfg.uuid){
+		printk("ble: datalog_cnfg write, len=%u offset=%u raw=%02x %02x %02x %02x\r\n",
+		       len, offset, datalog_config.config[0], datalog_config.config[1],
+		       datalog_config.config[2], datalog_config.config[3]);
+		/* phyphox writes byte 0 (cmd), the mask byte and the two parameter
+		 * bytes as separate BLE writes, each independently reaching this
+		 * callback. Only act once byte 0 itself arrives - the experiments
+		 * are built to always write it last, so mask/param are already up
+		 * to date by then. Reacting to every partial write would fire
+		 * datalog_configure() multiple times with incomplete/stale data in
+		 * between (e.g. an unintended full dump before the real request
+		 * with the correct parameters lands). */
+		if (offset == 0) {
+			uint16_t param = datalog_config.config[2] | (datalog_config.config[3] << 8);
+			datalog_configure(datalog_config.config[0], datalog_config.config[1], param);
+		}
+	}
 	return len;
 };
 
@@ -188,13 +206,26 @@ BT_GATT_CHARACTERISTIC(&lsm_acc_uuid,
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	//phyfob config
-	BT_GATT_CHARACTERISTIC(&phyfob_cnfg,					
+	BT_GATT_CHARACTERISTIC(&phyfob_cnfg,
 			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_WRITE,
 			       NULL, config_submits, &phyfob_config.config[0]),
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-	//EVENT SERVICE			
+	//DATALOG
+	BT_GATT_CHARACTERISTIC(&datalog_uuid,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ,
+			       read_u16, NULL, &datalog_config.array[0]),
+	BT_GATT_CCC(ccc_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	BT_GATT_CHARACTERISTIC(&datalog_cnfg,
+			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_WRITE,
+			       NULL, config_submits, &datalog_config.config[0]),
+	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	//EVENT SERVICE
 	BT_GATT_PRIMARY_SERVICE(&event_service_uuid),
 	BT_GATT_CHARACTERISTIC(&event_uuid,					
 			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
@@ -258,6 +289,7 @@ static void bt_ready(void)
 
 	if(serialNumber[0]==0x00 || serialNumber[0]==0xffff){
 		serialNumber[0]=0;
+		ascii[0]='#';
 	}
 	printk("number: %i \r\n",serialNumber[0]);
 
@@ -265,9 +297,9 @@ static void bt_ready(void)
 	printk("1: %c 2: %c 3: %c 4: %c \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
 	printk("1: %i 2: %i 3: %i 4: %i \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
 	if(ascii_custom[0] == 0xff && ascii_custom[1] == 0xff && ascii_custom[2] == 0xff && ascii_custom[3] == 0xff){
-		sprintf(name, "phyfob %c%02d\n", ascii[0], serialNumber[0]);
+		sprintf(name, "phyphox:mini %c%02d\n", ascii[0], serialNumber[0]);
 	}else{
-		sprintf(name, "phyfob %c%c%c%c\n", ascii_custom[3], ascii_custom[2],ascii_custom[1],ascii_custom[0]);	
+		sprintf(name, "phyphox:mini %c%c%c%c\n", ascii_custom[3], ascii_custom[2],ascii_custom[1],ascii_custom[0]);	
 		printk("neuer custom name: %s \r\n",name);
 	}
 	
@@ -488,6 +520,10 @@ extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){
 		}
 		if(ID == SENSOR_STCC4_ID){
 			bt_gatt_notify_uuid(NULL, &stcc4_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_DATALOG_ID){
+			bt_gatt_notify_uuid(NULL, &datalog_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
 			return;
 		}
 	}

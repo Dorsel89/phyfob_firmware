@@ -31,4 +31,5 @@ void hdc_data_ready();
 void set_config_hdc(struct k_work *work);
 
 extern void hdc_logging(bool l);
+extern void hdc_read_once(float *temperature, float *humidity);
 #endif

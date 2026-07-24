@@ -111,9 +111,37 @@ extern uint8_t stcc4_compensate(float t, float rh){
 
 extern void stcc4_logging(bool l){
     if(l){
+        printk("stcc4: logging enabled, interval=%us\r\n", logging.interval_s);
         k_timer_start(&timer_stcc4, K_MSEC(logging.interval_s*1000), K_MSEC(logging.interval_s*1000));
     }else{
+        printk("stcc4: logging disabled\r\n");
         k_timer_stop(&timer_stcc4);
+    }
+}
+
+/* Synchronous single-shot read for the datalog module: the vendor driver
+ * calls already block until the measurement is ready, so this is called
+ * directly at datalog-tick time instead of relying on stcc4's own
+ * independently-timed background sample, which could be up to a full
+ * interval stale. */
+void stcc4_read_once(float *co2)
+{
+    int16_t co2_concentration_raw = 0;
+    uint16_t temperature_raw = 0;
+    uint16_t relative_humidity_raw = 0;
+    uint16_t sensor_status_raw = 0;
+
+    stcc4_exit_sleep_mode();
+    stcc4_measure_single_shot();
+    stcc4_read_measurement_raw(
+        &co2_concentration_raw, &temperature_raw, &relative_humidity_raw,
+        &sensor_status_raw);
+    stcc4_enter_sleep_mode();
+    stcc4_data.co2 = co2_concentration_raw;
+
+    printk("stcc4: datalog read co2=%d ppm\r\n", co2_concentration_raw);
+    if(co2){
+        *co2 = stcc4_data.co2;
     }
 }
 
@@ -135,6 +163,8 @@ void send_data_stcc4(struct k_work *work)
             &co2_concentration_raw, &temperature_raw, &relative_humidity_raw,
             &sensor_status_raw);
         stcc4_enter_sleep_mode();
+        stcc4_data.co2 = co2_concentration_raw;
+        printk("stcc4: new reading co2=%d ppm\r\n", co2_concentration_raw);
         return;
 
     }else{

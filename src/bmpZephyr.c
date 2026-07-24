@@ -188,13 +188,36 @@ static void start_logging(){
     LOG.last_save=0;
     bmp_data.logging = true;
 }
-static void stop_logging(){
-    bmp_data.logging = false;
+/* Synchronous single-shot read for the datalog module: trigger a forced-
+ * mode conversion, wait out a conservative margin for it to complete (BMP's
+ * own conversion time is much shorter even at max oversampling), then read
+ * directly and return to deep standby. Called right at datalog-tick time
+ * so the logged value is as fresh as possible, instead of relying on a
+ * separately-timed background sample that may be stale by up to a full
+ * interval. */
+extern void bmp_read_once(float *pressure, float *temperature){
+    int8_t rslt = bmp5_set_power_mode(BMP5_POWERMODE_FORCED, &bmp581_dev);
+    bmp5_error_codes_print_result("bmp_read_once set_power_mode", rslt);
+    k_sleep(K_MSEC(100));
+    uint8_t result = get_sensor_data(&osr_odr_press_cfg, &bmp581_dev);
+    bmp5_error_codes_print_result("bmp_read_once get_sensor_data", result);
+    bmp5_set_power_mode(BMP5_POWERMODE_DEEP_STANDBY, &bmp581_dev);
+
+    printk("bmp: datalog read pressure=%f hPa temperature=%f C\r\n",
+           bmp_data.pressure, bmp_data.temperature);
+    if(pressure){
+        *pressure = bmp_data.pressure;
+    }
+    if(temperature){
+        *temperature = bmp_data.temperature;
+    }
 }
 
 extern void send_data_bmp(struct k_work *work){
     uint8_t result = get_sensor_data(&osr_odr_press_cfg, &bmp581_dev);
     bmp5_error_codes_print_result("get_sensor_data", result);
+    printk("bmp: new reading pressure=%f hPa temperature=%f C\r\n",
+           bmp_data.pressure, bmp_data.temperature);
 
     if(bmp_data.logging){
         float currentime = bmp_data.timestmap/32768.0;
@@ -239,6 +262,17 @@ extern int8_t init_bmp(){
     bmp_data.max_events=1;
     bmp_data.logging = false;
     bmp_data.live = false;
+
+    /* Point config fields at sane defaults before the first set_config()
+     * call below, which dereferences them; otherwise (until the BLE config
+     * characteristic is written at least once via submit_config_bmp()) they
+     * are NULL. */
+    bmp_data.enable = &bmp_data.config[0];
+    bmp_data.oversampling_p = &bmp_data.config[1];
+    bmp_data.iir = &bmp_data.config[2];
+    bmp_data.config[0] = 1;
+    bmp_data.config[1] = BMP5_OVERSAMPLING_1X;
+    bmp_data.config[2] = BMP5_IIR_FILTER_COEFF_1;
 
     dev_addr = BMP5_I2C_ADDR_PRIM;
     bmp581_dev.read = bmp5_i2c_read;

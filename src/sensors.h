@@ -13,6 +13,7 @@
 #define SENSOR_LSM6DSR_GYR_ID	3
 #define SENSOR_HDC_ID			4
 #define SENSOR_STCC4_ID			5
+#define SENSOR_DATALOG_ID		6
 
 #define LOG_MULTIPLIER 70
 
@@ -84,6 +85,11 @@ typedef struct {
 
 typedef struct {
 	uint8_t config[20];
+	float array[1];
+}DATALOG_CONFIG;
+
+typedef struct {
+	uint8_t config[20];
 	bool RUNNING;
 }PHYPHOX_EVENT;
 
@@ -122,5 +128,6 @@ typedef struct {
 
 extern DATALOGGING LOG;
 extern PHYFOB phyfob_config;
+extern DATALOG_CONFIG datalog_config;
 
 #endif // SENSORS_H

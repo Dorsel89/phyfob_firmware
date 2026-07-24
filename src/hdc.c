@@ -34,9 +34,34 @@ extern void sleep_hdc(bool sleep)
 
 extern void hdc_logging(bool l){
     if(l){
+        printk("hdc: logging enabled, interval=%us\r\n", logging.interval_s);
         k_timer_start(&timer_hdc, K_MSEC(logging.interval_s*1000), K_MSEC(logging.interval_s*1000));
     }else{
+        printk("hdc: logging disabled\r\n");
         k_timer_stop(&timer_hdc);
+    }
+}
+
+/* Synchronous single-shot read for the datalog module: sensor_sample_fetch()
+ * already blocks until the measurement is ready, so this is called directly
+ * at datalog-tick time instead of relying on hdc's own independently-timed
+ * background sample, which could be up to a full interval stale. */
+void hdc_read_once(float *temperature, float *humidity)
+{
+    sensor_sample_fetch(hdc_dev);
+    sensor_channel_get(hdc_dev, SENSOR_CHAN_AMBIENT_TEMP, &hdc_temp);
+    sensor_channel_get(hdc_dev, SENSOR_CHAN_HUMIDITY, &hdc_humid);
+
+    hdc_data.temperature = sensor_value_to_float(&hdc_temp);
+    hdc_data.humidity = sensor_value_to_float(&hdc_humid);
+
+    printk("hdc: datalog read temperature=%f C humidity=%f %%\r\n",
+           hdc_data.temperature, hdc_data.humidity);
+    if(temperature){
+        *temperature = hdc_data.temperature;
+    }
+    if(humidity){
+        *humidity = hdc_data.humidity;
     }
 }
 
@@ -66,6 +91,8 @@ void send_data_hdc(struct k_work *work)
     }
 
     if(logging.enable){
+        printk("hdc: new reading temperature=%f C humidity=%f %%\r\n",
+               hdc_data.temperature, hdc_data.humidity);
         stcc4_compensate(hdc_data.temperature,hdc_data.humidity);
         return;
     }
