@@ -76,7 +76,6 @@ typedef struct {
 
 typedef struct {
 	bool enable;
-	uint16_t interval_s;
 }LOGGING;
 
 typedef struct {

@@ -212,13 +212,6 @@ void datalog_configure(uint8_t cmd, uint8_t sensors_mask, uint16_t interval_s)
             if (interval_s == 0) {
                 interval_s = 30;
             }
-            /* logging.interval_s still feeds the older BTHome/live-view
-             * disconnect-triggered path in ble.c; datalog itself now
-             * triggers every sensor's measurement directly (see
-             * datalog_tick()) instead of relying on their own timers, so
-             * it no longer needs hdc_logging()/stcc4_logging()/BMP power
-             * mode calls here. */
-            logging.interval_s = interval_s;
             printk("datalog: logging active, record_size=%u bytes, ring capacity=%u records\r\n",
                    active_record_size, ring_size / DATALOG_SLOT_SIZE);
             k_timer_start(&timer_datalog, K_SECONDS(interval_s), K_SECONDS(interval_s));

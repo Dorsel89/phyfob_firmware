@@ -27,6 +27,5 @@ void stcc4_data_ready();
 void set_config_stcc4(struct k_work *work);
 
 extern uint8_t stcc4_compensate(float t, float rh);
-extern void stcc4_logging(bool l);
 extern void stcc4_read_once(float *co2);
 #endif

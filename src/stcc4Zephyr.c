@@ -69,12 +69,16 @@ extern int8_t init_stcc4(){
             return error;
     }
 
-    stcc4_data.timer_interval = logging.interval_s*1000;
     k_work_init(&work_stcc4, send_data_stcc4);
 	k_work_init(&config_work_stcc4, set_config_stcc4);
     k_timer_init(&timer_stcc4, stcc4_data_ready, NULL);
-    sleep_stcc4(!logging.enable);
-    //sleep_stcc4(true);
+    /* The datalog module now triggers every sensor's measurement directly
+     * (see datalog_tick()) at its own configured interval, so this legacy
+     * independently-timed background timer must stay stopped - starting it
+     * here (as sleep_stcc4(!logging.enable) used to, since logging.enable
+     * is true at boot) caused a redundant real sensor read every 60s on top
+     * of the datalog interval. */
+    sleep_stcc4(true);
     return true;
 
 }
@@ -107,16 +111,6 @@ extern uint8_t stcc4_compensate(float t, float rh){
     }
 
     return 0;
-}
-
-extern void stcc4_logging(bool l){
-    if(l){
-        printk("stcc4: logging enabled, interval=%us\r\n", logging.interval_s);
-        k_timer_start(&timer_stcc4, K_MSEC(logging.interval_s*1000), K_MSEC(logging.interval_s*1000));
-    }else{
-        printk("stcc4: logging disabled\r\n");
-        k_timer_stop(&timer_stcc4);
-    }
 }
 
 /* Synchronous single-shot read for the datalog module: the vendor driver

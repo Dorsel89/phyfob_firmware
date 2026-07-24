@@ -1,23 +1,22 @@
 #include "hdc.h"
 //HDC hdc_data;
 
-void bthome_mode(){
-    hdc_data.timer_interval = logging.interval_s*1000;
-    k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval), K_MSEC(hdc_data.timer_interval));
-}
-extern bool init_hdc() 
-{   
+extern bool init_hdc()
+{
     if(!device_is_ready(hdc_dev)){
         printk("Device not ready or not found");
         return false;
     }
-    hdc_data.timer_interval = logging.interval_s*1000;
     k_work_init(&work_hdc, send_data_hdc);
 	k_work_init(&config_work_hdc, set_config_hdc);
     k_timer_init(&timer_hdc, hdc_data_ready, NULL);
-    //OPERATING_MODE = MODE_BTHOME;
-    //bthome_mode();
-    sleep_hdc(!logging.enable);
+    /* The datalog module now triggers every sensor's measurement directly
+     * (see datalog_tick()) at its own configured interval, so this legacy
+     * independently-timed background timer must stay stopped - starting it
+     * here (as sleep_hdc(!logging.enable) used to, since logging.enable is
+     * true at boot) caused a redundant real sensor read every 60s on top of
+     * the datalog interval. */
+    sleep_hdc(true);
 
     return true;
 }
@@ -29,16 +28,6 @@ extern void sleep_hdc(bool sleep)
     }
     else{
         k_timer_start(&timer_hdc, K_MSEC(hdc_data.timer_interval), K_MSEC(hdc_data.timer_interval));
-    }
-}
-
-extern void hdc_logging(bool l){
-    if(l){
-        printk("hdc: logging enabled, interval=%us\r\n", logging.interval_s);
-        k_timer_start(&timer_hdc, K_MSEC(logging.interval_s*1000), K_MSEC(logging.interval_s*1000));
-    }else{
-        printk("hdc: logging disabled\r\n");
-        k_timer_stop(&timer_hdc);
     }
 }
 

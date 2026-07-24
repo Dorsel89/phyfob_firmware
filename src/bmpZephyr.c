@@ -64,10 +64,20 @@ void bmp5_error_codes_print_result(const char api_name[], int8_t rslt)
 static const struct gpio_dt_spec bmpInt = GPIO_DT_SPEC_GET_OR(BMP_INT, gpios,{0});
 static struct gpio_callback bmpInt_cb_data;
 
+/* Given by bmpDataReady() on every DRDY edge, consumed by bmp_read_once() to
+ * wait for the actual conversion instead of a fixed guess. */
+static struct k_sem bmp_drdy_sem;
+/* Set while bmp_read_once() is waiting for its own forced-mode DRDY, so the
+ * unrelated live-streaming work item isn't submitted for that same edge. */
+static volatile bool bmp_datalog_read_pending;
+
 static void bmpDataReady(const struct device *dev, struct gpio_callback *cb,uint32_t pins)
 {
     bmp_data.timestmap = k_uptime_ticks();
-	k_work_submit(&work_bmp);
+	k_sem_give(&bmp_drdy_sem);
+	if (!bmp_datalog_read_pending) {
+		k_work_submit(&work_bmp);
+	}
 }
 
 static int8_t set_config(struct bmp5_osr_odr_press_config *osr_odr_press_cfg, struct bmp5_dev *dev)
@@ -189,16 +199,26 @@ static void start_logging(){
     bmp_data.logging = true;
 }
 /* Synchronous single-shot read for the datalog module: trigger a forced-
- * mode conversion, wait out a conservative margin for it to complete (BMP's
- * own conversion time is much shorter even at max oversampling), then read
- * directly and return to deep standby. Called right at datalog-tick time
- * so the logged value is as fresh as possible, instead of relying on a
+ * mode conversion and wait for the sensor's own DRDY interrupt instead of a
+ * fixed guessed delay - this adapts automatically to whatever the actual
+ * oversampling setting requires and never reads stale data if a conversion
+ * happens to take longer than expected. The timeout is just a safety net in
+ * case the interrupt is ever missed. Called right at datalog-tick time so
+ * the logged value is as fresh as possible, instead of relying on a
  * separately-timed background sample that may be stale by up to a full
  * interval. */
 extern void bmp_read_once(float *pressure, float *temperature){
+    k_sem_reset(&bmp_drdy_sem);
+    bmp_datalog_read_pending = true;
+
     int8_t rslt = bmp5_set_power_mode(BMP5_POWERMODE_FORCED, &bmp581_dev);
     bmp5_error_codes_print_result("bmp_read_once set_power_mode", rslt);
-    k_sleep(K_MSEC(100));
+
+    if (k_sem_take(&bmp_drdy_sem, K_MSEC(50)) != 0) {
+        printk("bmp: datalog read timed out waiting for DRDY\r\n");
+    }
+    bmp_datalog_read_pending = false;
+
     uint8_t result = get_sensor_data(&osr_odr_press_cfg, &bmp581_dev);
     bmp5_error_codes_print_result("bmp_read_once get_sensor_data", result);
     bmp5_set_power_mode(BMP5_POWERMODE_DEEP_STANDBY, &bmp581_dev);
@@ -262,6 +282,8 @@ extern int8_t init_bmp(){
     bmp_data.max_events=1;
     bmp_data.logging = false;
     bmp_data.live = false;
+
+    k_sem_init(&bmp_drdy_sem, 0, 1);
 
     /* Point config fields at sane defaults before the first set_config()
      * call below, which dereferences them; otherwise (until the BLE config

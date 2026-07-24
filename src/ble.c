@@ -349,15 +349,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	sleep_stcc4(true);
 	sleep_hdc(true);
 
-	hdc_logging(logging.enable);
-	stcc4_logging(logging.enable);
-	
 	BLE_PARAMETER_UPDATED = false;
 	RESETTED = true;
 	
 	//OPERATING_MODE = MODE_BTHOME;
 	OPERATING_MODE = MODE_PHYPHOX;
-	//bthome_mode();
 }
 static void le_param_updated(struct bt_conn *conn, uint16_t interval,
 			     uint16_t latency, uint16_t timeout){
