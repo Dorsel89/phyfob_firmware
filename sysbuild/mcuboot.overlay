@@ -60,3 +60,11 @@
     };
 };
 
+/* MCUboot has no use for the BMV080's software I2C bus - disable it here so
+ * Kconfig doesn't auto-select CONFIG_I2C_GPIO/CONFIG_I2C_BITBANG for
+ * MCUboot's own (very RAM-constrained) build just because the node exists
+ * in the shared board devicetree. */
+&soft_i2c_bmv080 {
+	status = "disabled";
+};
+

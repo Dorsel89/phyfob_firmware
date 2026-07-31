@@ -110,6 +110,9 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 	if(attr->uuid == &bmv080_cnfg.uuid){
 		submit_config_bmv080();
 	}
+	if(attr->uuid == &supercap_cnfg.uuid){
+		submit_config_supercap();
+	}
 	if(attr->uuid == &event_uuid.uuid){
 		phyphox_event_received();
 	}
@@ -191,6 +194,19 @@ BT_GATT_CHARACTERISTIC(&lsm_acc_uuid,
 			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_WRITE,
 			       NULL, config_submits, &bmv080_data.config[0]),
+	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	//SUPERCAP
+	BT_GATT_CHARACTERISTIC(&supercap_uuid,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ,
+			       read_u16, NULL, &supercap_data.array[0]),
+	BT_GATT_CCC(ccc_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	BT_GATT_CHARACTERISTIC(&supercap_cnfg,
+			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_WRITE,
+			       NULL, config_submits, &supercap_data.config[0]),
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	//phyfob config
@@ -499,6 +515,10 @@ extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){
 		}
 		if(ID == SENSOR_BMV080_ID){
 			bt_gatt_notify_uuid(NULL, &bmv080_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_SUPERCAP_ID){
+			bt_gatt_notify_uuid(NULL, &supercap_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
 			return;
 		}
 	}

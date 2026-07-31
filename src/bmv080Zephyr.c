@@ -19,7 +19,6 @@ static volatile bool bmv080_config_pending = false;
 static volatile bool bmv080_stop_pending = false;
 
 static bmv080_handle_t _bmv080_handle = NULL;  // Handle for the BMV080 sensor.
-static struct device *bmv_dev = DEVICE_DT_GET(DT_ALIAS(i2c));
 #define BMV080_NODE DT_ALIAS(bmv080)
 static const struct i2c_dt_spec bmv080_dev = I2C_DT_SPEC_GET(BMV080_NODE);
 

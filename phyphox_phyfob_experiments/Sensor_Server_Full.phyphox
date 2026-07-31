@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phyphox version="1.19" locale="de">
+    <title>Messwert-Server: Feinstaub, Druck, Temperatur, Feuchte</title>
+    <category>Messwert-Server</category>
+    <description>Sendet Luftdruck, Temperatur, Luftfeuchtigkeit (HDC1080, BMP581) sowie
+CO2 (STCC4) und Feinstaub PM1/PM2.5/PM10 (BMV080) regelmaessig an
+https://phyfox.alwaysdata.net/api/ingest.php?session=feinstaub_1
+
+Datenfluss je Messgroesse: die Rohdaten landen in einem *_raw-Container. Im
+Analysedurchgang werden sie in einen *_send-Container (geht an den Server und
+wird danach geleert, damit nur neue Daten hochgeladen werden) UND in einen
+Visualisierungs-Container (behaelt alle Daten fuer die Grafiken) kopiert.
+
+Zum Starten oben rechts auf Play tippen. phyphox fragt beim ersten Senden
+einmal nach Erlaubnis fuer die Netzwerkverbindung.</description>
+
+    <data-containers>
+        <!-- Rohdaten vom Geraet (werden im Analysedurchgang geleert) -->
+        <container size="0">bmp_pressure_raw</container>
+        <container size="0">bmp_temperature_raw</container>
+        <container size="0">bmp_time_raw</container>
+        <container size="0">hdc_temperature_raw</container>
+        <container size="0">hdc_humidity_raw</container>
+        <container size="0">hdc_time_raw</container>
+        <container size="0">co2_raw</container>
+        <container size="0">co2_time_raw</container>
+        <container size="0">pm1_raw</container>
+        <container size="0">pm2_5_raw</container>
+        <container size="0">pm10_raw</container>
+        <container size="0">pm_time_raw</container>
+
+        <!-- Upload-Puffer: wird nach jedem Senden geleert (keep="false") -->
+        <container size="200">bmp_pressure_send</container>
+        <container size="200">bmp_temperature_send</container>
+        <container size="200">bmp_time_send</container>
+        <container size="200">hdc_temperature_send</container>
+        <container size="200">hdc_humidity_send</container>
+        <container size="200">hdc_time_send</container>
+        <container size="200">co2_send</container>
+        <container size="200">co2_time_send</container>
+        <container size="200">pm1_send</container>
+        <container size="200">pm2_5_send</container>
+        <container size="200">pm10_send</container>
+        <container size="200">pm_time_send</container>
+
+        <!-- Visualisierung: behaelt alle Daten der laufenden Messung -->
+        <container size="0">bmp_pressure</container>
+        <container size="0">bmp_temperature</container>
+        <container size="0">bmp_time</container>
+        <container size="0">hdc_temperature</container>
+        <container size="0">hdc_humidity</container>
+        <container size="0">hdc_time</container>
+        <container size="0">co2</container>
+        <container size="0">co2_time</container>
+        <container size="0">pm1</container>
+        <container size="0">pm2_5</container>
+        <container size="0">pm10</container>
+        <container size="0">pm_time</container>
+
+        <container size="1">rx_stored</container>
+        <container size="1">rx_total</container>
+    </data-containers>
+
+    <input>
+        <!-- config bytes, see the individual per-sensor experiments for the meaning of each byte:
+             BMP:    enable=1, oversampling=4, iir=1
+             HDC:    enable=1, interval=0x0A (x100ms = 1s)
+             STCC4:  enable=1, interval=0x0A (x100ms = 1s)
+             BMV080: mode=1 (continuous), algorithm=3 (high precision) -->
+        <bluetooth id="phyphox:mini" name="phyphox:mini" mode="notification" mtu="180" subscribeOnStart="true">
+            <config char="cddf1008-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010401</config>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian" repeating="12">bmp_pressure_raw</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian" repeating="12">bmp_temperature_raw</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian" repeating="12">bmp_time_raw</output>
+
+            <config char="cddf1006-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">hdc_temperature_raw</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">hdc_humidity_raw</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">hdc_time_raw</output>
+
+            <config char="cddf100c-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf100b-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">co2_raw</output>
+            <output char="cddf100b-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">co2_time_raw</output>
+
+            <config char="cddf1011-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">0103</config>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">pm1_raw</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">pm2_5_raw</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">pm10_raw</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="12" conversion="float32LittleEndian">pm_time_raw</output>
+        </bluetooth>
+    </input>
+
+    <views>
+        <view label="Messung">
+            <value label="Zuletzt gespeicherte Werte" size="1" precision="0">
+                <input>rx_stored</input>
+            </value>
+            <value label="Werte auf dem Server" size="1" precision="0">
+                <input>rx_total</input>
+            </value>
+            <graph label="Pressure" labelX="t" unitX="s" labelY="p" unitY="hPa" partialUpdate="true">
+                <input axis="x">bmp_time</input>
+                <input axis="y">bmp_pressure</input>
+            </graph>
+            <graph label="Temperature (BMP)" labelX="t" unitX="s" labelY="T" unitY="°C" partialUpdate="true">
+                <input axis="x">bmp_time</input>
+                <input axis="y">bmp_temperature</input>
+            </graph>
+            <graph label="Temperature (HDC)" labelX="t" unitX="s" labelY="T" unitY="°C" partialUpdate="true">
+                <input axis="x">hdc_time</input>
+                <input axis="y">hdc_temperature</input>
+            </graph>
+            <graph label="Humidity" labelX="t" unitX="s" labelY="RH" unitY="%" partialUpdate="true">
+                <input axis="x">hdc_time</input>
+                <input axis="y">hdc_humidity</input>
+            </graph>
+            <graph label="CO2" labelX="t" unitX="s" labelY="CO2" unitY="ppm" partialUpdate="true">
+                <input axis="x">co2_time</input>
+                <input axis="y">co2</input>
+            </graph>
+            <graph label="PM1" labelX="t" unitX="s" labelY="PM1" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm1</input>
+            </graph>
+            <graph label="PM2.5" labelX="t" unitX="s" labelY="PM2.5" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm2_5</input>
+            </graph>
+            <graph label="PM10" labelX="t" unitX="s" labelY="PM10" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm10</input>
+            </graph>
+        </view>
+    </views>
+
+    <analysis sleep="0" onUserInput="false">
+        <!-- Je Messgroesse: erst in den Upload-Puffer kopieren (Rohdaten dabei
+             behalten), dann in den Visualisierungs-Puffer kopieren und dabei
+             die Rohdaten leeren. -->
+        <append>
+            <input as="in" clear="false">bmp_pressure_raw</input>
+            <output as="out" clear="false">bmp_pressure_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_pressure_raw</input>
+            <output as="out" clear="false">bmp_pressure</output>
+        </append>
+        <append>
+            <input as="in" clear="false">bmp_temperature_raw</input>
+            <output as="out" clear="false">bmp_temperature_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_temperature_raw</input>
+            <output as="out" clear="false">bmp_temperature</output>
+        </append>
+        <append>
+            <input as="in" clear="false">bmp_time_raw</input>
+            <output as="out" clear="false">bmp_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_time_raw</input>
+            <output as="out" clear="false">bmp_time</output>
+        </append>
+
+        <append>
+            <input as="in" clear="false">hdc_temperature_raw</input>
+            <output as="out" clear="false">hdc_temperature_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_temperature_raw</input>
+            <output as="out" clear="false">hdc_temperature</output>
+        </append>
+        <append>
+            <input as="in" clear="false">hdc_humidity_raw</input>
+            <output as="out" clear="false">hdc_humidity_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_humidity_raw</input>
+            <output as="out" clear="false">hdc_humidity</output>
+        </append>
+        <append>
+            <input as="in" clear="false">hdc_time_raw</input>
+            <output as="out" clear="false">hdc_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_time_raw</input>
+            <output as="out" clear="false">hdc_time</output>
+        </append>
+
+        <append>
+            <input as="in" clear="false">co2_raw</input>
+            <output as="out" clear="false">co2_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">co2_raw</input>
+            <output as="out" clear="false">co2</output>
+        </append>
+        <append>
+            <input as="in" clear="false">co2_time_raw</input>
+            <output as="out" clear="false">co2_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">co2_time_raw</input>
+            <output as="out" clear="false">co2_time</output>
+        </append>
+
+        <append>
+            <input as="in" clear="false">pm1_raw</input>
+            <output as="out" clear="false">pm1_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">pm1_raw</input>
+            <output as="out" clear="false">pm1</output>
+        </append>
+        <append>
+            <input as="in" clear="false">pm2_5_raw</input>
+            <output as="out" clear="false">pm2_5_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">pm2_5_raw</input>
+            <output as="out" clear="false">pm2_5</output>
+        </append>
+        <append>
+            <input as="in" clear="false">pm10_raw</input>
+            <output as="out" clear="false">pm10_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">pm10_raw</input>
+            <output as="out" clear="false">pm10</output>
+        </append>
+        <append>
+            <input as="in" clear="false">pm_time_raw</input>
+            <output as="out" clear="false">pm_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">pm_time_raw</input>
+            <output as="out" clear="false">pm_time</output>
+        </append>
+    </analysis>
+
+    <export>
+        <set name="Raw data">
+            <data name="Time BMP (s)">bmp_time</data>
+            <data name="Pressure (hPa)">bmp_pressure</data>
+            <data name="Temperature BMP (°C)">bmp_temperature</data>
+            <data name="Time HDC (s)">hdc_time</data>
+            <data name="Temperature HDC (°C)">hdc_temperature</data>
+            <data name="Humidity (%)">hdc_humidity</data>
+            <data name="Time CO2 (s)">co2_time</data>
+            <data name="CO2 (ppm)">co2</data>
+            <data name="Time PM (s)">pm_time</data>
+            <data name="PM1 (µg/m³)">pm1</data>
+            <data name="PM2.5 (µg/m³)">pm2_5</data>
+            <data name="PM10 (µg/m³)">pm10</data>
+        </set>
+    </export>
+
+    <network>
+    <connection id="messwertserver" privacy="https://phyfox.alwaysdata.net/api/privacy.php" address="https://phyfox.alwaysdata.net/api/ingest.php?session=feinstaub_1" autoConnect="true" service="http/post" conversion="json" interval="5">
+        <send id="bmp_pressure" type="buffer" keep="false">bmp_pressure_send</send>
+        <send id="bmp_temperature" type="buffer" keep="false">bmp_temperature_send</send>
+        <send id="bmp_time" type="buffer" keep="false">bmp_time_send</send>
+        <send id="hdc_temperature" type="buffer" keep="false">hdc_temperature_send</send>
+        <send id="hdc_humidity" type="buffer" keep="false">hdc_humidity_send</send>
+        <send id="hdc_time" type="buffer" keep="false">hdc_time_send</send>
+        <send id="co2" type="buffer" keep="false">co2_send</send>
+        <send id="co2_time" type="buffer" keep="false">co2_time_send</send>
+        <send id="pm1" type="buffer" keep="false">pm1_send</send>
+        <send id="pm2_5" type="buffer" keep="false">pm2_5_send</send>
+        <send id="pm10" type="buffer" keep="false">pm10_send</send>
+        <send id="pm_time" type="buffer" keep="false">pm_time_send</send>
+        <send id="time" type="time" />
+        <send id="device" type="meta">deviceModel</send>
+        <receive id="stored" append="false">rx_stored</receive>
+        <receive id="total" append="false">rx_total</receive>
+    </connection>
+    </network>
+</phyphox>

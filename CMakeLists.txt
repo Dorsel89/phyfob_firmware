@@ -25,6 +25,7 @@ target_sources(app PRIVATE src/stcc4_i2c.c)
 target_sources(app PRIVATE src/sensirion_i2c_hal.c)
 target_sources(app PRIVATE src/sensirion_common.c)
 target_sources(app PRIVATE src/bmv080Zephyr.c)
+target_sources(app PRIVATE src/supercap.c)
 
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 add_library(lib_bmv080 STATIC IMPORTED GLOBAL)

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phyphox version="1.7" locale="de">
+    <title>Messwert-Server: labor1</title>
+    <category>Messwert-Server</category>
+    <description>Sendet die ausgewaehlten Sensordaten regelmaessig an
+https://phyfox.alwaysdata.net/api/ingest.php?session=labor1
+
+Erzeugt vom Messwert-Server. Zum Starten oben rechts auf Play tippen.
+phyphox fragt beim ersten Senden einmal nach Erlaubnis fuer die
+Netzwerkverbindung.</description>
+    <data-containers>
+        <container size="200">pressure_t</container>
+        <container size="200">pressure</container>
+        <container size="200">loc_t</container>
+        <container size="200">loc_lat</container>
+        <container size="200">loc_lon</container>
+        <container size="200">loc_height</container>
+        <container size="200">loc_speed</container>
+        <container size="200">loc_dir</container>
+        <container size="200">loc_accuracy</container>
+        <container size="1">rx_stored</container>
+        <container size="1">rx_total</container>
+    </data-containers>
+    <input>
+        <sensor type="pressure" rate="1">
+        <output component="t">pressure_t</output>
+        <output component="x">pressure</output>
+        </sensor>
+        <location>
+        <output component="t">loc_t</output>
+        <output component="lat">loc_lat</output>
+        <output component="lon">loc_lon</output>
+        <output component="z">loc_height</output>
+        <output component="v">loc_speed</output>
+        <output component="dir">loc_dir</output>
+        <output component="accuracy">loc_accuracy</output>
+        </location>
+    </input>
+    <views>
+        <view label="Messung">
+            <value label="Zuletzt gespeicherte Werte" size="1" precision="0">
+                <input>rx_stored</input>
+            </value>
+            <value label="Werte auf dem Server" size="1" precision="0">
+                <input>rx_total</input>
+            </value>
+            <graph label="pressure" labelX="t" unitX="s" labelY="pressure" unitY="hPa" partialUpdate="true">
+                <input axis="x">pressure_t</input>
+                <input axis="y">pressure</input>
+            </graph>
+            <graph label="loc_lat" labelX="t" unitX="s" labelY="loc_lat" unitY="°" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_lat</input>
+            </graph>
+            <graph label="loc_lon" labelX="t" unitX="s" labelY="loc_lon" unitY="°" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_lon</input>
+            </graph>
+            <graph label="loc_height" labelX="t" unitX="s" labelY="loc_height" unitY="m" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_height</input>
+            </graph>
+            <graph label="loc_speed" labelX="t" unitX="s" labelY="loc_speed" unitY="m/s" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_speed</input>
+            </graph>
+            <graph label="loc_dir" labelX="t" unitX="s" labelY="loc_dir" unitY="°" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_dir</input>
+            </graph>
+            <graph label="loc_accuracy" labelX="t" unitX="s" labelY="loc_accuracy" unitY="m" partialUpdate="true">
+                <input axis="x">loc_t</input>
+                <input axis="y">loc_accuracy</input>
+            </graph>
+        </view>
+    </views>
+    <export>
+    </export>
+    <network>
+    <connection id="messwertserver" privacy="https://phyfox.alwaysdata.net/api/privacy.php" address="https://phyfox.alwaysdata.net/api/ingest.php?session=labor1" autoConnect="true" service="http/post" conversion="json" interval="5">
+        <send id="pressure" type="buffer">pressure</send>
+        <send id="pressure_t" type="buffer">pressure_t</send>
+        <send id="loc_lat" type="buffer">loc_lat</send>
+        <send id="loc_lon" type="buffer">loc_lon</send>
+        <send id="loc_height" type="buffer">loc_height</send>
+        <send id="loc_speed" type="buffer">loc_speed</send>
+        <send id="loc_dir" type="buffer">loc_dir</send>
+        <send id="loc_accuracy" type="buffer">loc_accuracy</send>
+        <send id="loc_t" type="buffer">loc_t</send>
+        <send id="time" type="time" />
+        <send id="device" type="meta">deviceModel</send>
+        <receive id="stored" append="false">rx_stored</receive>
+        <receive id="total" append="false">rx_total</receive>
+    </connection>
+    </network>
+</phyphox>

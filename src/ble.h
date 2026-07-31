@@ -20,6 +20,7 @@
 #include "lsm6dsr.h"
 #include "stcc4Zephyr.h"
 #include "bmv080Zephyr.h"
+#include "supercap.h"
 #include "event.h"
 
 #define DEVICE_NAME "phyfob"
@@ -73,6 +74,9 @@ static struct bt_uuid_128 stcc4_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcdd
 //BMV080
 static struct bt_uuid_128 bmv080_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1010, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 static struct bt_uuid_128 bmv080_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1011, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+//SUPERCAP
+static struct bt_uuid_128 supercap_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1012, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+static struct bt_uuid_128 supercap_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1013, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
 static struct bt_uuid_128 phyfob_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1022, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 

@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phyphox version="1.19" locale="de">
+    <title>Messwert-Server: Druck, Temperatur, Feuchte</title>
+    <category>Messwert-Server</category>
+    <description>Sendet Luftdruck, Temperatur, Luftfeuchtigkeit (HDC1080, BMP581),
+CO2 (STCC4) und die GPS-Position des Telefons regelmaessig an
+https://phyfox.alwaysdata.net/api/ingest.php?session=phyphox:mini
+
+Alle Geraetesensoren werden auf ca. 1 Hz gemittelt (BMP581 liefert nativ
+schneller, je nach Oversampling; die Mittelung in phyphox bringt ihn auf die
+gleiche Rate wie HDC1080/STCC4).
+
+Datenfluss je Messgroesse: Rohdaten -> *_raw, daraus im Analysedurchgang der
+1-Hz-Mittelwert -> *_avg, dieser dann in einen *_send-Container (geht an den
+Server und wird danach geleert, damit nur neue Daten hochgeladen werden) UND
+in einen Visualisierungs-Container (behaelt alle Daten fuer die Grafiken).
+
+Zum Starten oben rechts auf Play tippen. phyphox fragt beim ersten Senden
+einmal nach Erlaubnis fuer die Netzwerkverbindung.</description>
+
+    <data-containers>
+        <!-- Rohdaten (werden im Analysedurchgang gemittelt und geleert) -->
+        <container size="0">bmp_pressure_raw</container>
+        <container size="0">bmp_temperature_raw</container>
+        <container size="0">bmp_time_raw</container>
+        <container size="0">hdc_temperature_raw</container>
+        <container size="0">hdc_humidity_raw</container>
+        <container size="0">hdc_time_raw</container>
+        <container size="0">co2_raw</container>
+        <container size="0">co2_time_raw</container>
+        <container size="0">loc_lat_raw</container>
+        <container size="0">loc_lon_raw</container>
+        <container size="0">loc_height_raw</container>
+        <container size="0">loc_speed_raw</container>
+        <container size="0">loc_dir_raw</container>
+        <container size="0">loc_accuracy_raw</container>
+        <container size="0">loc_time_raw</container>
+
+        <!-- 1-Hz-Mittelwerte (Zwischenschritt) -->
+        <container size="1">bmp_pressure_avg</container>
+        <container size="1">bmp_temperature_avg</container>
+        <container size="1">bmp_time_avg</container>
+        <container size="1">hdc_temperature_avg</container>
+        <container size="1">hdc_humidity_avg</container>
+        <container size="1">hdc_time_avg</container>
+        <container size="1">co2_avg</container>
+        <container size="1">co2_time_avg</container>
+
+        <!-- Upload-Puffer: wird nach jedem Senden geleert (keep="false") -->
+        <container size="200">bmp_pressure_send</container>
+        <container size="200">bmp_temperature_send</container>
+        <container size="200">bmp_time_send</container>
+        <container size="200">hdc_temperature_send</container>
+        <container size="200">hdc_humidity_send</container>
+        <container size="200">hdc_time_send</container>
+        <container size="200">co2_send</container>
+        <container size="200">co2_time_send</container>
+        <container size="200">loc_lat_send</container>
+        <container size="200">loc_lon_send</container>
+        <container size="200">loc_height_send</container>
+        <container size="200">loc_speed_send</container>
+        <container size="200">loc_dir_send</container>
+        <container size="200">loc_accuracy_send</container>
+        <container size="200">loc_time_send</container>
+
+        <!-- Visualisierung: behaelt alle Daten der laufenden Messung -->
+        <container size="0">bmp_pressure</container>
+        <container size="0">bmp_temperature</container>
+        <container size="0">bmp_time</container>
+        <container size="0">hdc_temperature</container>
+        <container size="0">hdc_humidity</container>
+        <container size="0">hdc_time</container>
+        <container size="0">co2</container>
+        <container size="0">co2_time</container>
+        <container size="0">loc_lat</container>
+        <container size="0">loc_lon</container>
+        <container size="0">loc_height</container>
+        <container size="0">loc_speed</container>
+        <container size="0">loc_dir</container>
+        <container size="0">loc_accuracy</container>
+        <container size="0">loc_time</container>
+
+        <container size="1">rx_stored</container>
+        <container size="1">rx_total</container>
+    </data-containers>
+
+    <input>
+        <!-- config bytes, see the individual per-sensor experiments for the meaning of each byte:
+             BMP:   enable=1, oversampling=7 (128x, slows down the native/interrupt-driven
+                    rate so the 1 Hz averaging below has enough headroom), iir=1
+             HDC:   enable=1, interval=0x0A (x100ms = 1s) - already native 1 Hz
+             STCC4: enable=1, interval=0x0A (x100ms = 1s) - already native 1 Hz -->
+        <bluetooth id="phyphox:mini" name="phyphox:mini" mode="notification" mtu="180" subscribeOnStart="true">
+            <config char="cddf1008-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010701</config>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian" repeating="12">bmp_pressure_raw</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian" repeating="12">bmp_temperature_raw</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian" repeating="12">bmp_time_raw</output>
+
+            <config char="cddf1006-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">hdc_temperature_raw</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">hdc_humidity_raw</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">hdc_time_raw</output>
+
+            <config char="cddf100c-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf100b-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">co2_raw</output>
+            <output char="cddf100b-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">co2_time_raw</output>
+        </bluetooth>
+        <location>
+            <output component="t">loc_time_raw</output>
+            <output component="lat">loc_lat_raw</output>
+            <output component="lon">loc_lon_raw</output>
+            <output component="z">loc_height_raw</output>
+            <output component="v">loc_speed_raw</output>
+            <output component="dir">loc_dir_raw</output>
+            <output component="accuracy">loc_accuracy_raw</output>
+        </location>
+    </input>
+
+    <views>
+        <view label="Messung">
+            <value label="Zuletzt gespeicherte Werte" size="1" precision="0">
+                <input>rx_stored</input>
+            </value>
+            <value label="Werte auf dem Server" size="1" precision="0">
+                <input>rx_total</input>
+            </value>
+            <graph label="Pressure" labelX="t" unitX="s" labelY="p" unitY="hPa" partialUpdate="true">
+                <input axis="x">bmp_time</input>
+                <input axis="y">bmp_pressure</input>
+            </graph>
+            <graph label="Temperature (BMP)" labelX="t" unitX="s" labelY="T" unitY="°C" partialUpdate="true">
+                <input axis="x">bmp_time</input>
+                <input axis="y">bmp_temperature</input>
+            </graph>
+            <graph label="Temperature (HDC)" labelX="t" unitX="s" labelY="T" unitY="°C" partialUpdate="true">
+                <input axis="x">hdc_time</input>
+                <input axis="y">hdc_temperature</input>
+            </graph>
+            <graph label="Humidity" labelX="t" unitX="s" labelY="RH" unitY="%" partialUpdate="true">
+                <input axis="x">hdc_time</input>
+                <input axis="y">hdc_humidity</input>
+            </graph>
+            <graph label="CO2" labelX="t" unitX="s" labelY="CO2" unitY="ppm" partialUpdate="true">
+                <input axis="x">co2_time</input>
+                <input axis="y">co2</input>
+            </graph>
+            <graph label="Latitude" labelX="t" unitX="s" labelY="lat" unitY="°" partialUpdate="true">
+                <input axis="x">loc_time</input>
+                <input axis="y">loc_lat</input>
+            </graph>
+            <graph label="Longitude" labelX="t" unitX="s" labelY="lon" unitY="°" partialUpdate="true">
+                <input axis="x">loc_time</input>
+                <input axis="y">loc_lon</input>
+            </graph>
+            <graph label="Altitude" labelX="t" unitX="s" labelY="h" unitY="m" partialUpdate="true">
+                <input axis="x">loc_time</input>
+                <input axis="y">loc_height</input>
+            </graph>
+            <graph label="GPS accuracy" labelX="t" unitX="s" labelY="accuracy" unitY="m" partialUpdate="true">
+                <input axis="x">loc_time</input>
+                <input axis="y">loc_accuracy</input>
+            </graph>
+        </view>
+    </views>
+
+    <analysis sleep="1" onUserInput="false">
+        <!-- Geraetesensoren: Rohdaten -> 1-Hz-Mittelwert, dann in den
+             Upload-Puffer (Mittelwert dabei behalten) und anschliessend in den
+             Visualisierungs-Puffer kopieren. -->
+        <average>
+            <input as="buffer" clear="true">bmp_pressure_raw</input>
+            <output as="average" keep="false">bmp_pressure_avg</output>
+        </average>
+        <average>
+            <input as="buffer" clear="true">bmp_temperature_raw</input>
+            <output as="average" keep="false">bmp_temperature_avg</output>
+        </average>
+        <average>
+            <input as="buffer" clear="true">bmp_time_raw</input>
+            <output as="average" keep="false">bmp_time_avg</output>
+        </average>
+        <append>
+            <input as="in" clear="false">bmp_pressure_avg</input>
+            <output as="out" clear="false">bmp_pressure_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_pressure_avg</input>
+            <output as="out" clear="false">bmp_pressure</output>
+        </append>
+        <append>
+            <input as="in" clear="false">bmp_temperature_avg</input>
+            <output as="out" clear="false">bmp_temperature_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_temperature_avg</input>
+            <output as="out" clear="false">bmp_temperature</output>
+        </append>
+        <append>
+            <input as="in" clear="false">bmp_time_avg</input>
+            <output as="out" clear="false">bmp_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">bmp_time_avg</input>
+            <output as="out" clear="false">bmp_time</output>
+        </append>
+
+        <average>
+            <input as="buffer" clear="true">hdc_temperature_raw</input>
+            <output as="average" keep="false">hdc_temperature_avg</output>
+        </average>
+        <average>
+            <input as="buffer" clear="true">hdc_humidity_raw</input>
+            <output as="average" keep="false">hdc_humidity_avg</output>
+        </average>
+        <average>
+            <input as="buffer" clear="true">hdc_time_raw</input>
+            <output as="average" keep="false">hdc_time_avg</output>
+        </average>
+        <append>
+            <input as="in" clear="false">hdc_temperature_avg</input>
+            <output as="out" clear="false">hdc_temperature_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_temperature_avg</input>
+            <output as="out" clear="false">hdc_temperature</output>
+        </append>
+        <append>
+            <input as="in" clear="false">hdc_humidity_avg</input>
+            <output as="out" clear="false">hdc_humidity_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_humidity_avg</input>
+            <output as="out" clear="false">hdc_humidity</output>
+        </append>
+        <append>
+            <input as="in" clear="false">hdc_time_avg</input>
+            <output as="out" clear="false">hdc_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">hdc_time_avg</input>
+            <output as="out" clear="false">hdc_time</output>
+        </append>
+
+        <average>
+            <input as="buffer" clear="true">co2_raw</input>
+            <output as="average" keep="false">co2_avg</output>
+        </average>
+        <average>
+            <input as="buffer" clear="true">co2_time_raw</input>
+            <output as="average" keep="false">co2_time_avg</output>
+        </average>
+        <append>
+            <input as="in" clear="false">co2_avg</input>
+            <output as="out" clear="false">co2_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">co2_avg</input>
+            <output as="out" clear="false">co2</output>
+        </append>
+        <append>
+            <input as="in" clear="false">co2_time_avg</input>
+            <output as="out" clear="false">co2_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">co2_time_avg</input>
+            <output as="out" clear="false">co2_time</output>
+        </append>
+
+        <!-- GPS: keine Mittelung (liefert ohnehin nur ca. 1 Hz), aber die
+             gleiche Aufteilung in Upload- und Visualisierungs-Puffer. -->
+        <append>
+            <input as="in" clear="false">loc_lat_raw</input>
+            <output as="out" clear="false">loc_lat_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_lat_raw</input>
+            <output as="out" clear="false">loc_lat</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_lon_raw</input>
+            <output as="out" clear="false">loc_lon_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_lon_raw</input>
+            <output as="out" clear="false">loc_lon</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_height_raw</input>
+            <output as="out" clear="false">loc_height_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_height_raw</input>
+            <output as="out" clear="false">loc_height</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_speed_raw</input>
+            <output as="out" clear="false">loc_speed_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_speed_raw</input>
+            <output as="out" clear="false">loc_speed</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_dir_raw</input>
+            <output as="out" clear="false">loc_dir_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_dir_raw</input>
+            <output as="out" clear="false">loc_dir</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_accuracy_raw</input>
+            <output as="out" clear="false">loc_accuracy_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_accuracy_raw</input>
+            <output as="out" clear="false">loc_accuracy</output>
+        </append>
+        <append>
+            <input as="in" clear="false">loc_time_raw</input>
+            <output as="out" clear="false">loc_time_send</output>
+        </append>
+        <append>
+            <input as="in" clear="true">loc_time_raw</input>
+            <output as="out" clear="false">loc_time</output>
+        </append>
+    </analysis>
+
+    <export>
+        <set name="Raw data">
+            <data name="Time BMP (s)">bmp_time</data>
+            <data name="Pressure (hPa)">bmp_pressure</data>
+            <data name="Temperature BMP (°C)">bmp_temperature</data>
+            <data name="Time HDC (s)">hdc_time</data>
+            <data name="Temperature HDC (°C)">hdc_temperature</data>
+            <data name="Humidity (%)">hdc_humidity</data>
+            <data name="Time CO2 (s)">co2_time</data>
+            <data name="CO2 (ppm)">co2</data>
+            <data name="Time GPS (s)">loc_time</data>
+            <data name="Latitude (°)">loc_lat</data>
+            <data name="Longitude (°)">loc_lon</data>
+            <data name="Altitude (m)">loc_height</data>
+            <data name="Speed (m/s)">loc_speed</data>
+            <data name="Direction (°)">loc_dir</data>
+            <data name="GPS accuracy (m)">loc_accuracy</data>
+        </set>
+    </export>
+
+    <network>
+    <connection id="messwertserver" privacy="https://phyfox.alwaysdata.net/api/privacy.php" address="https://phyfox.alwaysdata.net/api/ingest.php?session=phyphox:mini" autoConnect="true" service="http/post" conversion="json" interval="5">
+        <send id="bmp_pressure" type="buffer" keep="false">bmp_pressure_send</send>
+        <send id="bmp_temperature" type="buffer" keep="false">bmp_temperature_send</send>
+        <send id="bmp_time" type="buffer" keep="false">bmp_time_send</send>
+        <send id="hdc_temperature" type="buffer" keep="false">hdc_temperature_send</send>
+        <send id="hdc_humidity" type="buffer" keep="false">hdc_humidity_send</send>
+        <send id="hdc_time" type="buffer" keep="false">hdc_time_send</send>
+        <send id="co2" type="buffer" keep="false">co2_send</send>
+        <send id="co2_time" type="buffer" keep="false">co2_time_send</send>
+        <send id="loc_lat" type="buffer" keep="false">loc_lat_send</send>
+        <send id="loc_lon" type="buffer" keep="false">loc_lon_send</send>
+        <send id="loc_height" type="buffer" keep="false">loc_height_send</send>
+        <send id="loc_speed" type="buffer" keep="false">loc_speed_send</send>
+        <send id="loc_dir" type="buffer" keep="false">loc_dir_send</send>
+        <send id="loc_accuracy" type="buffer" keep="false">loc_accuracy_send</send>
+        <send id="loc_time" type="buffer" keep="false">loc_time_send</send>
+        <send id="time" type="time" />
+        <send id="device" type="meta">deviceModel</send>
+        <receive id="stored" append="false">rx_stored</receive>
+        <receive id="total" append="false">rx_total</receive>
+        <send id="uniqueID" type="meta">uniqueID</send>
+
+    </connection>
+    </network>
+</phyphox>

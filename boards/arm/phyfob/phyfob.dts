@@ -44,6 +44,14 @@
 			label = "bmp data ready";
 		};
 	};
+
+	/* Supercap voltage sense on P0.30 (AIN6), behind a 2x 1 MOhm divider
+	 * (see SUPERCAP_DIVIDER_RATIO in src/supercap.h) - the supercap can
+	 * charge above the nRF52832's safe pin voltage, never wire it directly. */
+	zephyr,user {
+		io-channels = <&adc 6>;
+		io-channel-names = "supercap";
+	};
  };
 
  &pinctrl {
@@ -109,12 +117,29 @@
 		reg = <0x40>;
 		label = "hdc1080";
 	};
-	bmv080_node: bmv080@54 {
-        	compatible = "bosch,i2c-device";
-        	reg = <0x54>; /* This is the 7-bit I2C address */
-        	status = "okay";
-    	};
+};
 
+/* BMV080 on its own software (bit-banged) I2C bus on the more accessible
+ * P0.28/P0.29 header pins - both hardware TWI-capable peripherals on this
+ * chip are already spoken for (i2c0 above for HDC/STCC4/BMP, i2c1's shared
+ * silicon block is in use as spi1 for the LSM6DSR), and spi2 (external
+ * flash) is a dedicated SPI-only block with no I2C alternative at all. */
+/ {
+	soft_i2c_bmv080: i2c-gpio-bmv080 {
+		compatible = "gpio-i2c";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		sda-gpios = <&gpio0 28 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		scl-gpios = <&gpio0 29 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		clock-frequency = <I2C_BITRATE_STANDARD>;
+
+		bmv080_node: bmv080@54 {
+			compatible = "bosch,i2c-device";
+			reg = <0x54>; /* This is the 7-bit I2C address */
+			status = "okay";
+		};
+	};
 };
 
 my_spi_master: &spi1 {
@@ -160,7 +185,17 @@ flash_spi_master: &spi2 {
 };
 
  &adc {
-	 status = "disabled";
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	channel@6 {
+		reg = <6>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_AIN6>;
+		zephyr,resolution = <12>;
+	};
  };
 
 

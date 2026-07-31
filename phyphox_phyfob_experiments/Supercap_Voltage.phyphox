@@ -1,0 +1,59 @@
+<phyphox version="1.18">
+    <title>Supercap Voltage</title>
+    <category>phyphox:mini</category>
+    <color>ADEBB3</color>
+    <description>Supercap voltage (P0.30/AIN6, behind a 2x 1 MOhm divider)</description>
+    <translations>
+        <translation locale="de">
+            <title>Superkondensator-Spannung</title>
+            <category>phyphox:mini</category>
+            <string original="Rawdata">Rohdaten</string>
+        </translation>
+    </translations>
+
+    <data-containers>
+        <container size="0">time_raw</container>
+        <container size="0">time</container>
+        <container size="1">timeOffset</container>
+        <container size="0">voltage</container>
+    </data-containers>
+    <input>
+        <!-- config byte 0: enable (1 = start), byte 1: interval in units of
+             100 ms (0A = 10 -> 1000 ms) -->
+        <bluetooth id="phyphox:mini" name="phyphox:mini" mode="notification" subscribeOnStart="true">
+            <config char="cddf1013-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1012-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">voltage</output>
+            <output char="cddf1012-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">time_raw</output>
+        </bluetooth>
+    </input>
+    <output>
+    </output>
+    <views>
+        <view label="Rawdata">
+            <graph label="Supercap Voltage" timeOnX="true" labelX="time" unitX="s" labelY="U" unitY="V" partialUpdate="true">
+                <input axis="x">time</input>
+                <input axis="y">voltage</input>
+            </graph>
+            <value label="Voltage" unit="V" size="1" precision="2" scientific="false" factor="1" >
+                <input>voltage</input>
+            </value>
+        </view>
+    </views>
+    <analysis sleep="0" onUserInput="false">
+        <first>
+            <input as="value" clear="false">time_raw</input>
+            <output as="first">timeOffset</output>
+        </first>
+        <subtract>
+            <input as="minuend" clear="false">time_raw</input>
+            <input as="subtrahend" clear="false">timeOffset</input>
+            <output as="difference">time</output>
+        </subtract>
+    </analysis>
+    <export>
+        <set name="Raw data">
+            <data name="Time (s)">time</data>
+            <data name="Voltage (V)">voltage</data>
+        </set>
+    </export>
+</phyphox>

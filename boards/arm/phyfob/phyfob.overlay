@@ -1,6 +1,11 @@
 &uicr {
     nfct-pins-as-gpios;
 };
+/* NOTE: this file is NOT automatically applied by the build (verified: only
+ * sysbuild/mcuboot.overlay gets picked up for this board/app layout) - it
+ * has always been dead/inert. The supercap ADC config that used to be
+ * sketched here (commented out) now lives directly in phyfob.dts instead,
+ * where it actually takes effect. Kept only for reference/history. */
 /*
 / {
 	zephyr,user {

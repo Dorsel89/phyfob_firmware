@@ -14,6 +14,7 @@
 #define SENSOR_HDC_ID			4
 #define SENSOR_STCC4_ID			5
 #define SENSOR_BMV080_ID		6
+#define SENSOR_SUPERCAP_ID		7
 
 #define LOG_MULTIPLIER 70
 
@@ -105,12 +106,20 @@ typedef struct {
 	uint8_t config[20];
 }BMV080;
 
+typedef struct {
+	float voltage;
+	float array[2]; // voltage, time
+	uint16_t timer_interval;
+	uint8_t config[20];
+}SUPERCAP;
+
 extern HDC hdc_data;
 extern BMP bmp_data;
 extern LSM lsm_data;
 extern LOGGING logging;
 extern STCC4 stcc4_data;
 extern BMV080 bmv080_data;
+extern SUPERCAP supercap_data;
 
 extern PHYPHOX_EVENT event_data;
 extern volatile float global_timestamp;

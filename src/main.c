@@ -11,6 +11,7 @@
 #include "lsm6dsr.h"
 #include "stcc4Zephyr.h"
 #include "bmv080Zephyr.h"
+#include "supercap.h"
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
@@ -54,8 +55,9 @@ int main(void)
         //init_BAS();
         printk("BMV\r\n");
         init_bmv080();
-       
-        
+        init_supercap();
+
+
         const struct device *flash_dev = DEVICE_DT_GET(DT_NODELABEL(at25ff161a));
        
         if (!device_is_ready(flash_dev)) {
