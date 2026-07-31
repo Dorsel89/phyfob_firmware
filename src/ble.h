@@ -70,6 +70,9 @@ static struct bt_uuid_128 hdc_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1
 //STCC4
 static struct bt_uuid_128 stcc4_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf100b, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 static struct bt_uuid_128 stcc4_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf100c, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+//BMV080
+static struct bt_uuid_128 bmv080_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1010, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
+static struct bt_uuid_128 bmv080_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1011, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 
 static struct bt_uuid_128 phyfob_cnfg = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xcddf1022, 0x30f7, 0x4671, 0x8b43, 0x5e40ba53514a));
 

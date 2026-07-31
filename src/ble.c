@@ -107,6 +107,9 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 	if(attr->uuid == &stcc4_cnfg.uuid){
 		submit_config_stcc4();
 	}
+	if(attr->uuid == &bmv080_cnfg.uuid){
+		submit_config_bmv080();
+	}
 	if(attr->uuid == &event_uuid.uuid){
 		phyphox_event_received();
 	}
@@ -175,6 +178,19 @@ BT_GATT_CHARACTERISTIC(&lsm_acc_uuid,
 			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_WRITE,
 			       NULL, config_submits, &stcc4_data.config[0]),
+	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	//BMV080
+	BT_GATT_CHARACTERISTIC(&bmv080_uuid,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ,
+			       read_u16, NULL, &bmv080_data.array[0]),
+	BT_GATT_CCC(ccc_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	BT_GATT_CHARACTERISTIC(&bmv080_cnfg,
+			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_WRITE,
+			       NULL, config_submits, &bmv080_data.config[0]),
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	//phyfob config
@@ -255,9 +271,9 @@ static void bt_ready(void)
 	printk("1: %c 2: %c 3: %c 4: %c \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
 	printk("1: %i 2: %i 3: %i 4: %i \r\n", ascii_custom[0],ascii_custom[1],ascii_custom[2],ascii_custom[3]);
 	if(ascii_custom[0] == 0xff && ascii_custom[1] == 0xff && ascii_custom[2] == 0xff && ascii_custom[3] == 0xff){
-		sprintf(name, "phyfob %c%02d\n", ascii[0], serialNumber[0]);
+		sprintf(name, "phyphox:mini %c%02d\n", ascii[0], serialNumber[0]);
 	}else{
-		sprintf(name, "phyfob %c%c%c%c\n", ascii_custom[3], ascii_custom[2],ascii_custom[1],ascii_custom[0]);	
+		sprintf(name, "phyphox:mini %c%c%c%c\n", ascii_custom[3], ascii_custom[2],ascii_custom[1],ascii_custom[0]);	
 		printk("neuer custom name: %s \r\n",name);
 	}
 	
@@ -306,6 +322,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	sleep_bmp(true);
 	sleep_stcc4(true);
 	sleep_hdc(true);
+	bmv080_request_stop();
 
 	hdc_logging(logging.enable);
 	stcc4_logging(logging.enable);
@@ -478,6 +495,10 @@ extern void send_data(uint8_t ID, float* DATA,uint8_t LEN){
 		}
 		if(ID == SENSOR_STCC4_ID){
 			bt_gatt_notify_uuid(NULL, &stcc4_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
+			return;
+		}
+		if(ID == SENSOR_BMV080_ID){
+			bt_gatt_notify_uuid(NULL, &bmv080_uuid.uuid,&phyphox_gatt.attrs[0],DATA,LEN);
 			return;
 		}
 	}

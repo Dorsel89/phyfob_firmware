@@ -83,6 +83,15 @@ int main(void)
         
         
         pm_device_action_run(flash_dev,PM_DEVICE_ACTION_SUSPEND);
-        
+
+        /* Polling bmv080_serve_interrupt() from here (main thread) rather
+         * than from a k_timer/k_work on the shared system workqueue - the
+         * BMV080 library needs ~10kB of stack per its datasheet, and only
+         * main's stack is sized for that (see CONFIG_MAIN_STACK_SIZE). */
+        while (1) {
+                k_sleep(K_MSEC(BMV080_POLL_INTERVAL_MS));
+                bmv080_poll();
+        }
+
         return 0;
 }

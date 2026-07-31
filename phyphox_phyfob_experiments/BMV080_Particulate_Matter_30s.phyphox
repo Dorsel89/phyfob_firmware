@@ -1,0 +1,83 @@
+<phyphox version="1.18">
+    <title>Particulate Matter (every 30s)</title>
+    <category>phyphox:mini</category>
+    <color>ADEBB3</color>
+    <description>BMV080, one measurement every 30 seconds instead of continuous</description>
+    <translations>
+        <translation locale="de">
+            <title>Feinstaub (alle 30s)</title>
+            <category>phyphox:mini</category>
+            <string original="Rawdata">Rohdaten</string>
+            <string original="Particulate matter">Feinstaub</string>
+        </translation>
+    </translations>
+
+    <data-containers>
+        <container size="0">pm_time_raw</container>
+        <container size="0">pm_time</container>
+        <container size="1">pm_timeOffset</container>
+        <container size="0">pm1</container>
+        <container size="0">pm2_5</container>
+        <container size="0">pm10</container>
+    </data-containers>
+    <input>
+        <!-- config byte 0: mode = 2 (duty-cycling, see BMV080_MODE_DUTY_CYCLE)
+             config byte 1: measurement algorithm, ignored in duty-cycling mode
+             config bytes 2-3: duty-cycling period in seconds, uint16 little-endian = 30 (0x001E) -->
+        <bluetooth id="phyphox:mini" name="phyphox:mini" mode="notification" subscribeOnStart="true">
+            <config char="cddf1011-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">02001E00</config>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">pm1</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">pm2_5</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">pm10</output>
+            <output char="cddf1010-30f7-4671-8b43-5e40ba53514a" offset="12" conversion="float32LittleEndian">pm_time_raw</output>
+        </bluetooth>
+    </input>
+    <output>
+    </output>
+    <views>
+        <view label="Rawdata">
+            <graph label="PM1" timeOnX="true" labelX="time" unitX="s" labelY="PM1" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm1</input>
+            </graph>
+            <value label="PM1" unit="µg/m³" size="1" precision="2" scientific="false" factor="1" >
+                <input>pm1</input>
+            </value>
+
+            <graph label="PM2.5" timeOnX="true" labelX="time" unitX="s" labelY="PM2.5" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm2_5</input>
+            </graph>
+            <value label="PM2.5" unit="µg/m³" size="1" precision="2" scientific="false" factor="1" >
+                <input>pm2_5</input>
+            </value>
+
+            <graph label="PM10" timeOnX="true" labelX="time" unitX="s" labelY="PM10" unitY="µg/m³" partialUpdate="true">
+                <input axis="x">pm_time</input>
+                <input axis="y">pm10</input>
+            </graph>
+            <value label="PM10" unit="µg/m³" size="1" precision="2" scientific="false" factor="1" >
+                <input>pm10</input>
+            </value>
+        </view>
+    </views>
+    <analysis sleep="0" onUserInput="false">
+        <first>
+            <input as="value" clear="false">pm_time_raw</input>
+            <output as="first">pm_timeOffset</output>
+        </first>
+        <subtract>
+            <input as="minuend" clear="false">pm_time_raw</input>
+            <input as="subtrahend" clear="false">pm_timeOffset</input>
+            <output as="difference">pm_time</output>
+        </subtract>
+    </analysis>
+    <export>
+        <set name="Raw data">
+            <data name="Time (s)">pm_time</data>
+            <data name="PM1 (µg/m³)">pm1</data>
+            <data name="PM2.5 (µg/m³)">pm2_5</data>
+            <data name="PM10 (µg/m³)">pm10</data>
+        </set>
+    </export>
+</phyphox>

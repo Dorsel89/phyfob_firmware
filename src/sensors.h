@@ -13,6 +13,7 @@
 #define SENSOR_LSM6DSR_GYR_ID	3
 #define SENSOR_HDC_ID			4
 #define SENSOR_STCC4_ID			5
+#define SENSOR_BMV080_ID		6
 
 #define LOG_MULTIPLIER 70
 
@@ -96,11 +97,20 @@ typedef struct {
 	uint8_t config[20];
 }HDC;
 
+typedef struct {
+	float pm1;
+	float pm2_5;
+	float pm10;
+	float array[4]; // pm1, pm2_5, pm10, time
+	uint8_t config[20];
+}BMV080;
+
 extern HDC hdc_data;
 extern BMP bmp_data;
 extern LSM lsm_data;
 extern LOGGING logging;
 extern STCC4 stcc4_data;
+extern BMV080 bmv080_data;
 
 extern PHYPHOX_EVENT event_data;
 extern volatile float global_timestamp;
