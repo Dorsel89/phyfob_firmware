@@ -1,0 +1,174 @@
+<phyphox version="1.19">
+    <title>3x phyphox:mini - Pressure, Temperature, Humidity</title>
+    <category>phyphox:mini</category>
+    <color>ADEBB3</color>
+    <description>Reads air pressure (BMP581), temperature and relative humidity
+(HDC1080) from three phyphox:mini devices at once and plots them together for
+comparison.
+
+phyphox asks which physical device to use for each of the three connections
+when the experiment is started.</description>
+    <translations>
+        <translation locale="de">
+            <title>3x phyphox:mini - Druck, Temperatur, Feuchte</title>
+            <category>phyphox:mini</category>
+            <description>Liest Luftdruck (BMP581), Temperatur und relative
+Luftfeuchtigkeit (HDC1080) von drei phyphox:mini-Geraeten gleichzeitig aus und
+stellt sie zum Vergleich gemeinsam dar.
+
+phyphox fragt beim Start, welches physische Geraet fuer welche der drei
+Verbindungen verwendet werden soll.</description>
+            <string original="Rawdata">Rohdaten</string>
+            <string original="Pressure">Druck</string>
+            <string original="Temperature">Temperatur</string>
+            <string original="Relative humidity">Relative Luftfeuchtigkeit</string>
+            <string original="Device 1">Geraet 1</string>
+            <string original="Device 2">Geraet 2</string>
+            <string original="Device 3">Geraet 3</string>
+        </translation>
+    </translations>
+
+    <data-containers>
+        <container size="0">bmp_time1</container>
+        <container size="0">pressure1</container>
+        <container size="0">hdc_time1</container>
+        <container size="0">temperature1</container>
+        <container size="0">humidity1</container>
+
+        <container size="0">bmp_time2</container>
+        <container size="0">pressure2</container>
+        <container size="0">hdc_time2</container>
+        <container size="0">temperature2</container>
+        <container size="0">humidity2</container>
+
+        <container size="0">bmp_time3</container>
+        <container size="0">pressure3</container>
+        <container size="0">hdc_time3</container>
+        <container size="0">temperature3</container>
+        <container size="0">humidity3</container>
+    </data-containers>
+
+    <input>
+        <!-- config bytes:
+             BMP (cddf1008): enable=1, oversampling=4 (16x), iir=1
+             HDC (cddf1006): enable=1, interval=0x0A (x100ms = 1s) -->
+        <bluetooth id="LOW" name="phyphox:mini LOW" mode="notification" mtu="180" subscribeOnStart="true">
+            <config char="cddf1008-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010401</config>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian" repeating="12">pressure1</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian" repeating="12">bmp_time1</output>
+            <config char="cddf1006-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">temperature1</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">humidity1</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">hdc_time1</output>
+        </bluetooth>
+
+        <bluetooth id="MID" name="phyphox:mini MID" mode="notification" mtu="180" subscribeOnStart="true">
+            <config char="cddf1008-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010401</config>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian" repeating="12">pressure2</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian" repeating="12">bmp_time2</output>
+            <config char="cddf1006-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">temperature2</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">humidity2</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">hdc_time2</output>
+        </bluetooth>
+
+        <bluetooth id="HIGH" name="phyphox:mini HIGH" mode="notification" mtu="180" subscribeOnStart="true">
+            <config char="cddf1008-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010401</config>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian" repeating="12">pressure3</output>
+            <output char="cddf1007-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian" repeating="12">bmp_time3</output>
+            <config char="cddf1006-30f7-4671-8b43-5e40ba53514a" conversion="hexadecimal">010A</config>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="0" conversion="float32LittleEndian">temperature3</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="4" conversion="float32LittleEndian">humidity3</output>
+            <output char="cddf1005-30f7-4671-8b43-5e40ba53514a" offset="8" conversion="float32LittleEndian">hdc_time3</output>
+        </bluetooth>
+    </input>
+
+    <views>
+        <view label="Rawdata">
+            <graph label="Pressure" timeOnX="true" labelX="t" unitX="s" labelY="p" unitY="hPa" partialUpdate="true">
+                <input axis="x" color="0076CF">bmp_time1</input>
+                <input axis="y">pressure1</input>
+                <input axis="x" color="de4343">bmp_time2</input>
+                <input axis="y">pressure2</input>
+                <input axis="x" color="35Ad3B">bmp_time3</input>
+                <input axis="y">pressure3</input>
+            </graph>
+            <value label="Pressure" unit="hPa" size="1" precision="3" scientific="false" factor="1" color="0076CF">
+                <input>pressure1</input>
+            </value>
+            <value label="Pressure" unit="hPa" size="1" precision="3" scientific="false" factor="1" color="de4343">
+                <input>pressure2</input>
+            </value>
+            <value label="Pressure" unit="hPa" size="1" precision="3" scientific="false" factor="1" color="35Ad3B">
+                <input>pressure3</input>
+            </value>
+
+            <separator height="0.3"/>
+
+            <graph label="Temperature" timeOnX="true" labelX="t" unitX="s" labelY="T" unitY="°C" partialUpdate="true">
+                <input axis="x" color="0076CF">hdc_time1</input>
+                <input axis="y">temperature1</input>
+                <input axis="x" color="de4343">hdc_time2</input>
+                <input axis="y">temperature2</input>
+                <input axis="x" color="35Ad3B">hdc_time3</input>
+                <input axis="y">temperature3</input>
+            </graph>
+            <value label="Temperature" unit="°C" size="1" precision="1" scientific="false" factor="1" color="0076CF">
+                <input>temperature1</input>
+            </value>
+            <value label="Temperature" unit="°C" size="1" precision="1" scientific="false" factor="1" color="de4343">
+                <input>temperature2</input>
+            </value>
+            <value label="Temperature" unit="°C" size="1" precision="1" scientific="false" factor="1" color="35Ad3B">
+                <input>temperature3</input>
+            </value>
+
+            <separator height="0.3"/>
+
+            <graph label="Relative humidity" timeOnX="true" labelX="t" unitX="s" labelY="RH" unitY="%" partialUpdate="true">
+                <input axis="x" color="0076CF">hdc_time1</input>
+                <input axis="y">humidity1</input>
+                <input axis="x" color="de4343">hdc_time2</input>
+                <input axis="y">humidity2</input>
+                <input axis="x" color="35Ad3B">hdc_time3</input>
+                <input axis="y">humidity3</input>
+            </graph>
+            <value label="Relative humidity" unit="%" size="1" precision="1" scientific="false" factor="1" color="0076CF">
+                <input>humidity1</input>
+            </value>
+            <value label="Relative humidity" unit="%" size="1" precision="1" scientific="false" factor="1" color="de4343">
+                <input>humidity2</input>
+            </value>
+            <value label="Relative humidity" unit="%" size="1" precision="1" scientific="false" factor="1" color="35Ad3B">
+                <input>humidity3</input>
+            </value>
+        </view>
+    </views>
+
+    <analysis>
+    </analysis>
+
+    <export>
+        <set name="Device 1">
+            <data name="Time p (s)">bmp_time1</data>
+            <data name="Pressure (hPa)">pressure1</data>
+            <data name="Time T,RH (s)">hdc_time1</data>
+            <data name="Temperature (°C)">temperature1</data>
+            <data name="Relative humidity (%)">humidity1</data>
+        </set>
+        <set name="Device 2">
+            <data name="Time p (s)">bmp_time2</data>
+            <data name="Pressure (hPa)">pressure2</data>
+            <data name="Time T,RH (s)">hdc_time2</data>
+            <data name="Temperature (°C)">temperature2</data>
+            <data name="Relative humidity (%)">humidity2</data>
+        </set>
+        <set name="Device 3">
+            <data name="Time p (s)">bmp_time3</data>
+            <data name="Pressure (hPa)">pressure3</data>
+            <data name="Time T,RH (s)">hdc_time3</data>
+            <data name="Temperature (°C)">temperature3</data>
+            <data name="Relative humidity (%)">humidity3</data>
+        </set>
+    </export>
+</phyphox>
