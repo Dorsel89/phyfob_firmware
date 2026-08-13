@@ -35,15 +35,20 @@ void init_ble();
 
 void send_data(uint8_t ID, float* DATA,uint8_t LEN);
 
-void update_advertising(uint8_t t_low, uint8_t t_high, uint8_t h_low, uint8_t h_high);
-void basic_advertising();
+/* Swaps the advertising payload to a BTHome v2 packet for a few seconds so
+ * that receivers which never connect (Home Assistant and friends) pick up
+ * the values. sensor_mask uses the DATALOG_SENSOR_* bits and decides which
+ * of the four arguments actually make it into the packet. Does nothing
+ * unless bthome_set_enabled(true) was called. */
+void bthome_publish(uint8_t sensor_mask, float co2, float temperature,
+		    float humidity, float pressure);
+/* Driven by DATALOG_CMD_BTHOME on the datalog config characteristic. */
+void bthome_set_enabled(bool enable);
 
 //void en_logging(bool b);
 
 extern void set_coincell_level(uint8_t val);
 uint8_t phyfob_config_received(struct bt_conn *conn);
-extern struct k_work stop_adv;
-void restart_ee_advertising(struct k_work *work);
 
 extern bool BLE_PARAMETER_UPDATED;
 

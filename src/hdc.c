@@ -68,16 +68,6 @@ void send_data_hdc(struct k_work *work)
     
     hdc_data.temperature = sensor_value_to_float(&hdc_temp);
     hdc_data.humidity = sensor_value_to_float(&hdc_humid);
-    if(OPERATING_MODE == MODE_BTHOME){
-        int16_t temp = (int16_t)(hdc_data.temperature*100);
-        uint16_t hum = (uint16_t)(hdc_data.humidity*100);
-        printk("new data hdc t: %i h: %i \r\n",temp,hum);
-        uint8_t dat[4];
-        memcpy(&dat[0],&temp,2);
-        memcpy(&dat[0+2],&hum,2);
-        update_advertising(dat[0],dat[1],dat[2],dat[3]);
-        return;
-    }
 
     if(logging.enable){
         printk("hdc: new reading temperature=%f C humidity=%f %%\r\n",

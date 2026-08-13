@@ -31,12 +31,6 @@ static inline float sensor_value_to_float(const struct sensor_value *val)
 }
 */
 
-extern uint8_t OPERATING_MODE;
-#define MODE_SLEEPING	0
-#define MODE_PHYPHOX	1
-#define MODE_BTHOME		2
-
-
 typedef struct {
 	int max_events;
 	int current_event;

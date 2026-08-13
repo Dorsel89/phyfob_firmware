@@ -108,6 +108,12 @@ static void datalog_tick(struct k_work *work)
         printk("datalog: ring buffer wrapped around\r\n");
         write_offset = 0;
     }
+
+    /* Push the same values out over BTHome so receivers that never connect
+     * (Home Assistant and friends) see them. This can only ever run while no
+     * phone is connected, because logging.enable is false for the duration
+     * of a connection - see the guard at the top of this function. */
+    bthome_publish(active_mask, co2, temperature, humidity, pressure);
 }
 
 static void timer_datalog_handler(struct k_timer *timer)
@@ -229,6 +235,13 @@ void datalog_configure(uint8_t cmd, uint8_t sensors_mask, uint16_t interval_s)
         case DATALOG_CMD_ERASE:
             printk("ERASE DATALOGGING CMD\r\n");
             datalog_erase();
+            break;
+        case DATALOG_CMD_BTHOME:
+            /* Here, the "interval_s" parameter is reinterpreted once more:
+             * 0 turns the BTHome advertising bursts off, anything else turns
+             * them on. */
+            printk("BTHOME ADVERTISING CMD: %s\r\n", interval_s ? "enable" : "disable");
+            bthome_set_enabled(interval_s != 0);
             break;
         default:
             break;
