@@ -253,6 +253,37 @@ static ssize_t config_submits(struct bt_conn *conn, const struct bt_gatt_attr *a
 	return len;
 };
 
+/* The datalog config characteristic is written as a command (cmd, mask,
+ * param_lo, param_hi - see datalog_configure()), but reads back the
+ * configuration actually in effect, so the app can show what a fob is
+ * logging after it restored its settings from flash on a battery change:
+ *   byte 0    : 1 while logging runs, 0 while stopped - that is exactly the
+ *               DATALOG_CMD_START/DATALOG_CMD_STOP value which would
+ *               recreate the current state
+ *   byte 1    : sensor mask (DATALOG_SENSOR_*)
+ *   bytes 2-3 : logging interval in seconds, little endian - the same
+ *               offsets the interval is written at
+ *   byte 4    : 1 if BTHome advertising is enabled
+ */
+static ssize_t read_datalog_config(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+				   void *buf, uint16_t len, uint16_t offset)
+{
+	struct datalog_state state;
+	uint8_t value[5];
+
+	datalog_get_state(&state);
+
+	value[0] = state.running ? DATALOG_CMD_START : DATALOG_CMD_STOP;
+	value[1] = state.mask;
+	sys_put_le16(state.interval_s, &value[2]);
+	value[4] = state.bthome ? 1 : 0;
+
+	printk("ble: datalog_cnfg read, running=%u mask=0x%02x interval=%us bthome=%u\r\n",
+	       value[0], value[1], state.interval_s, value[4]);
+
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
+}
+
 BT_GATT_SERVICE_DEFINE(phyphox_gatt, 
 	BT_GATT_PRIMARY_SERVICE(&data_service_uuid),
 	//BMP384 
@@ -329,9 +360,9 @@ BT_GATT_CHARACTERISTIC(&lsm_acc_uuid,
 	BT_GATT_CCC(ccc_cfg_changed,
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&datalog_cnfg,
-			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
-			       BT_GATT_PERM_WRITE,
-			       NULL, config_submits, &datalog_config.config[0]),
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+			       read_datalog_config, config_submits, &datalog_config.config[0]),
 	BT_GATT_CCC(ccc_cfg_changed,	//notification handler
 		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	//EVENT SERVICE

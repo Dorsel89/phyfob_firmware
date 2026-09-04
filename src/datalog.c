@@ -5,17 +5,63 @@
 #include "bmpZephyr.h"
 
 #include <zephyr/storage/flash_map.h>
+#include <zephyr/sys/crc.h>
 #include <pm_config.h>
+#include <stddef.h>
 #include <string.h>
 
 #define DATALOG_SLOT_SIZE   32
 #define DATALOG_SECTOR_SIZE 4096
+
+/* The last sector of the datalog partition holds the user's logging
+ * settings so that they survive a reboot - and, more to the point, a
+ * battery change: the sensor selection and the interval must not have to
+ * be entered in the app again every time the cell is swapped.
+ *
+ * Carving the sector out of the existing partition (instead of adding a
+ * new one) deliberately leaves the flash layout untouched, so the address
+ * MCUboot expects its secondary slot at - baked into a bootloader that can
+ * only be replaced over SWD - does not move.
+ *
+ * Settings are appended slot by slot within that sector, which is erased
+ * only once it is full, so the (rare) configuration writes spread out over
+ * 256 slots instead of erasing the same sector on every change. */
+#define DATALOG_CFG_SIZE      DATALOG_SECTOR_SIZE
+#define DATALOG_CFG_SLOT_SIZE 16
+#define DATALOG_CFG_SLOTS     (DATALOG_CFG_SIZE / DATALOG_CFG_SLOT_SIZE)
+#define DATALOG_CFG_MAGIC     0x4746434dUL /* "MCFG" */
+#define DATALOG_CFG_VERSION   1
+
+struct datalog_cfg {
+    uint32_t magic;
+    uint8_t version;
+    uint8_t mask;
+    uint16_t interval_s;
+    uint8_t running;
+    uint8_t bthome;
+    uint8_t reserved[2];
+    /* CRC over everything before it, so a record torn apart by a battery
+     * that dies mid-write is rejected instead of restored as garbage. */
+    uint32_t crc;
+};
+BUILD_ASSERT(sizeof(struct datalog_cfg) == DATALOG_CFG_SLOT_SIZE,
+             "datalog_cfg must fill exactly one config slot");
 
 static const struct flash_area *datalog_fa;
 static uint32_t ring_size;
 static uint32_t write_offset;
 static uint8_t active_mask;
 static uint8_t active_record_size;
+static uint16_t active_interval_s;
+static bool active_running;
+static bool active_bthome;
+
+/* Offset of the config sector inside the partition, index of the next
+ * unwritten slot in it, and a mirror of the record currently stored
+ * there (magic stays 0 until anything has been written). */
+static uint32_t cfg_base;
+static uint32_t cfg_next_slot;
+static struct datalog_cfg stored_cfg;
 
 static struct k_timer timer_datalog;
 static struct k_work work_datalog;
@@ -30,6 +76,86 @@ static uint8_t datalog_record_size(uint8_t mask)
         }
     }
     return 4 + 4 * fields;
+}
+
+static uint32_t datalog_cfg_crc(const struct datalog_cfg *cfg)
+{
+    return crc32_ieee((const uint8_t *)cfg, offsetof(struct datalog_cfg, crc));
+}
+
+/* Scans the config sector for the newest valid record. Records are only
+ * ever appended, so the last valid one before the first erased slot is the
+ * current configuration. Returns true if one was found. */
+static bool datalog_cfg_load(void)
+{
+    struct datalog_cfg slot;
+    bool found = false;
+
+    cfg_next_slot = DATALOG_CFG_SLOTS;
+
+    for (uint32_t i = 0; i < DATALOG_CFG_SLOTS; i++) {
+        int err = flash_area_read(datalog_fa, cfg_base + i * DATALOG_CFG_SLOT_SIZE,
+                                  &slot, sizeof(slot));
+        if (err) {
+            printk("datalog: config read failed at slot %u (%d)\r\n", i, err);
+            cfg_next_slot = i;
+            break;
+        }
+        if (slot.magic == 0xFFFFFFFF) {
+            cfg_next_slot = i;
+            break;
+        }
+        if (slot.magic == DATALOG_CFG_MAGIC && slot.version == DATALOG_CFG_VERSION &&
+            slot.crc == datalog_cfg_crc(&slot)) {
+            stored_cfg = slot;
+            found = true;
+        } else {
+            printk("datalog: ignoring invalid config record in slot %u\r\n", i);
+        }
+    }
+
+    return found;
+}
+
+/* Persists the settings, unless flash already holds exactly these values -
+ * every start/stop command would otherwise burn a slot for nothing. */
+static void datalog_cfg_save(uint8_t mask, uint16_t interval_s, bool running, bool bthome)
+{
+    struct datalog_cfg cfg = {
+        .magic = DATALOG_CFG_MAGIC,
+        .version = DATALOG_CFG_VERSION,
+        .mask = mask,
+        .interval_s = interval_s,
+        .running = running ? 1 : 0,
+        .bthome = bthome ? 1 : 0,
+    };
+    cfg.crc = datalog_cfg_crc(&cfg);
+
+    if (memcmp(&cfg, &stored_cfg, sizeof(cfg)) == 0) {
+        return;
+    }
+
+    if (cfg_next_slot >= DATALOG_CFG_SLOTS) {
+        printk("datalog: config sector full, erasing\r\n");
+        int erase_err = flash_area_erase(datalog_fa, cfg_base, DATALOG_CFG_SIZE);
+        if (erase_err) {
+            printk("datalog: config erase failed (%d)\r\n", erase_err);
+            return;
+        }
+        cfg_next_slot = 0;
+    }
+
+    int err = flash_area_write(datalog_fa, cfg_base + cfg_next_slot * DATALOG_CFG_SLOT_SIZE,
+                               &cfg, sizeof(cfg));
+    if (err) {
+        printk("datalog: config write failed (%d)\r\n", err);
+        return;
+    }
+
+    stored_cfg = cfg;
+    cfg_next_slot++;
+    printk("datalog: config saved to slot %u (mask=0x%02x interval=%us running=%u bthome=%u)\r\n",
+           cfg_next_slot - 1, cfg.mask, cfg.interval_s, cfg.running, cfg.bthome);
 }
 
 void datalog_erase(void)
@@ -202,6 +328,14 @@ static void datalog_dump(uint16_t max_age_minutes)
     printk("datalog: dump complete, sent %u of %u records\r\n", sent, count);
 }
 
+void datalog_get_state(struct datalog_state *state)
+{
+    state->running = active_running;
+    state->mask = active_mask;
+    state->interval_s = active_interval_s;
+    state->bthome = active_bthome;
+}
+
 void datalog_configure(uint8_t cmd, uint8_t sensors_mask, uint16_t interval_s)
 {
     printk("CMD: %i\r\n",cmd);
@@ -218,13 +352,18 @@ void datalog_configure(uint8_t cmd, uint8_t sensors_mask, uint16_t interval_s)
             if (interval_s == 0) {
                 interval_s = 30;
             }
+            active_interval_s = interval_s;
             printk("datalog: logging active, record_size=%u bytes, ring capacity=%u records\r\n",
                    active_record_size, ring_size / DATALOG_SLOT_SIZE);
             k_timer_start(&timer_datalog, K_SECONDS(interval_s), K_SECONDS(interval_s));
+            active_running = true;
+            datalog_cfg_save(active_mask, active_interval_s, active_running, active_bthome);
             break;
         case DATALOG_CMD_STOP:
             printk("STOP DATALOGGING CMD\r\n");
             k_timer_stop(&timer_datalog);
+            active_running = false;
+            datalog_cfg_save(active_mask, active_interval_s, active_running, active_bthome);
             break;
         case DATALOG_CMD_DUMP:
             /* Here, the "interval_s" parameter is reinterpreted as the
@@ -242,26 +381,40 @@ void datalog_configure(uint8_t cmd, uint8_t sensors_mask, uint16_t interval_s)
              * them on. */
             printk("BTHOME ADVERTISING CMD: %s\r\n", interval_s ? "enable" : "disable");
             bthome_set_enabled(interval_s != 0);
+            active_bthome = (interval_s != 0);
+            datalog_cfg_save(active_mask, active_interval_s, active_running, active_bthome);
             break;
         default:
             break;
     }
 }
 
-void init_datalog(void)
+bool init_datalog(void)
 {
     int err = flash_area_open(PM_DATALOG_ID, &datalog_fa);
     if (err) {
         printk("datalog: failed to open flash area (%d)\r\n", err);
-        return;
+        return false;
     }
 
-    ring_size = datalog_fa->fa_size;
-    printk("datalog: flash area opened, id=%d size=%u\r\n", PM_DATALOG_ID, ring_size);
+    if (datalog_fa->fa_size <= DATALOG_CFG_SIZE) {
+        printk("datalog: flash area too small (%u bytes)\r\n", datalog_fa->fa_size);
+        return false;
+    }
+
+    /* The tail sector is the settings store, everything before it is the
+     * record ring - datalog_erase() therefore never touches the settings. */
+    cfg_base = ROUND_DOWN(datalog_fa->fa_size - DATALOG_CFG_SIZE, DATALOG_SECTOR_SIZE);
+    ring_size = cfg_base;
+    printk("datalog: flash area opened, id=%d size=%u (ring %u, config @%u)\r\n",
+           PM_DATALOG_ID, datalog_fa->fa_size, ring_size, cfg_base);
 
     write_offset = 0;
     active_mask = 0;
     active_record_size = 0;
+    active_interval_s = 0;
+    active_running = false;
+    active_bthome = false;
     k_work_init(&work_datalog, datalog_tick);
     k_timer_init(&timer_datalog, timer_datalog_handler, NULL);
 
@@ -270,5 +423,32 @@ void init_datalog(void)
      * new records. Always start with a clean slate rather than resuming a
      * prior session. */
     datalog_erase();
-    printk("datalog: ring buffer erased at boot, waiting for start command\r\n");
+    printk("datalog: ring buffer erased at boot\r\n");
+
+    if (!datalog_cfg_load()) {
+        printk("datalog: no stored configuration, waiting for start command\r\n");
+        return false;
+    }
+
+    active_mask = stored_cfg.mask;
+    active_record_size = datalog_record_size(active_mask);
+    active_interval_s = stored_cfg.interval_s;
+    active_bthome = (stored_cfg.bthome != 0);
+    active_running = (stored_cfg.running != 0) && active_mask != 0 && active_interval_s != 0;
+
+    /* Restored, not re-commanded: nothing here may write back to flash,
+     * otherwise every single boot would consume a config slot. */
+    bthome_set_enabled(active_bthome);
+
+    if (active_running) {
+        printk("datalog: restored session, mask=0x%02x interval=%us bthome=%u\r\n",
+               active_mask, active_interval_s, active_bthome);
+        k_timer_start(&timer_datalog, K_SECONDS(active_interval_s),
+                      K_SECONDS(active_interval_s));
+    } else {
+        printk("datalog: restored settings, logging off (mask=0x%02x interval=%us bthome=%u)\r\n",
+               active_mask, active_interval_s, active_bthome);
+    }
+
+    return true;
 }
